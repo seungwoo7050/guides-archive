@@ -4,7 +4,7 @@ import verified_algorithms.graphs
 
 class HistoricalStageTests(unittest.TestCase):
     def test_stage_is_importable(self) -> None:
-        self.assertTrue('bellman-ford')
+        self.assertTrue('flow')
 
 if __name__ == '__main__':
     unittest.main()
