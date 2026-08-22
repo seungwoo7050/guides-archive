@@ -3,5 +3,6 @@
 from . import bits
 from . import isa
 from . import perf
+from . import control
 
-__all__ = ['bits', 'isa', 'perf']
+__all__ = ['bits', 'isa', 'perf', 'control']
