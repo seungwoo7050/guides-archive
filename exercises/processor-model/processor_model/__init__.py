@@ -4,5 +4,6 @@ from . import bits
 from . import isa
 from . import perf
 from . import control
+from . import pipeline
 
-__all__ = ['bits', 'isa', 'perf', 'control']
+__all__ = ['bits', 'isa', 'perf', 'control', 'pipeline']
