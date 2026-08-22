@@ -1,0 +1,29 @@
+# 운영체제·편집기
+.DS_Store
+*.swp
+*.swo
+
+# 로그·임시 파일
+*.log
+*.pid
+*.tmp
+
+# 환경 변수·비밀값
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+**/.pytest_cache/
+.venv/
+*.py[cod]
+.coverage
+htmlcov/
+
+# 패키지·빌드 결과
+build/
+dist/
+*.egg-info/
