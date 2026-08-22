@@ -5,5 +5,7 @@ from . import synchronization
 from . import scheduler
 from . import deadlock
 from . import paging
+from . import filesystem
+from . import journal
 
-__all__ = ['lifecycle', 'synchronization', 'scheduler', 'deadlock', 'paging']
+__all__ = ['lifecycle', 'synchronization', 'scheduler', 'deadlock', 'paging', 'filesystem', 'journal']
