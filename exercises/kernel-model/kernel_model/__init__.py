@@ -2,5 +2,6 @@
 
 from . import lifecycle
 from . import synchronization
+from . import scheduler
 
-__all__ = ['lifecycle', 'synchronization']
+__all__ = ['lifecycle', 'synchronization', 'scheduler']
