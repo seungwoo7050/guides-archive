@@ -85,7 +85,14 @@ export async function buildApp({
       return;
     }
 
-    void mutate(event);
+    const result = mutate(event);
+
+    // [Implementation 8] Snapshot, preview, and patch dispatch
+    if (result.kind === "stale") {
+      hub.send(client, { type: "board.snapshot", snapshot: result.snapshot });
+      return;
+    }
+    hub.broadcast(event.boardId, result.event);
   }
 
   function mutate(event: Exclude<ClientEvent, { type: "board.join" | "snapshot.request" | "cursor.move" }>): MutationResult {
@@ -97,6 +104,25 @@ export async function buildApp({
     }
     return boards.moveItem(event.boardId, event);
   }
+
+  // [Implementation 9] Heartbeat and shutdown cleanup
+  const heartbeat = setInterval(() => {
+    for (const client of hub.all()) {
+      if (!client.alive) {
+        client.socket.terminate();
+        hub.remove(client);
+        continue;
+      }
+      client.alive = false;
+      client.socket.ping();
+    }
+  }, heartbeatIntervalMs);
+  heartbeat.unref();
+
+  app.addHook("onClose", async () => {
+    clearInterval(heartbeat);
+    hub.closeAll();
+  });
 
   return app;
 }
