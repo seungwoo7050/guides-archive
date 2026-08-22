@@ -291,10 +291,163 @@ fail:
     return -1;
 }
 
-/* Parser-only CLI used before process execution is introduced. */
+static void close_ignored(int fd) {
+    if (fd >= 0) {
+        (void)close(fd);
+    }
+}
+
+/* [Implementation 5] Wait retry and file-descriptor duplication */
+static int wait_retry(pid_t pid, int *out_status) {
+    pid_t result;
+
+    do {
+        result = waitpid(pid, out_status, 0);
+    } while (result == -1 && errno == EINTR);
+    return result == pid ? 0 : -1;
+}
+
+static int public_status(int raw_status) {
+    if (WIFEXITED(raw_status)) {
+        return WEXITSTATUS(raw_status);
+    }
+    if (WIFSIGNALED(raw_status)) {
+        return 128 + WTERMSIG(raw_status);
+    }
+    return 125;
+}
+
+static int duplicate_to(int source, int destination) {
+    int result;
+
+    // 파이프가 닫힌 표준 FD 번호를 재사용하면
+    // source와 destination이 같을 수 있습니다.
+    if (source == destination) {
+        return 0;
+    }
+    do {
+        result = dup2(source, destination);
+    } while (result == -1 && errno == EINTR);
+    return result == -1 ? -1 : 0;
+}
+
+static void close_pipe_end_after_dup(
+    int fd,
+    int input_fd,
+    int output_fd
+) {
+    if (fd < 0) {
+        return;
+    }
+    if (fd == STDIN_FILENO && input_fd != -1) {
+        return;
+    }
+    if (fd == STDOUT_FILENO && output_fd != -1) {
+        return;
+    }
+    close_ignored(fd);
+}
+
+/* [Implementation 6] Child setup and exec failure status */
+static void child_exec(
+    char *const argv[],
+    int input_fd,
+    int output_fd,
+    int read_fd,
+    int write_fd
+) {
+    int saved_errno;
+    static const char message[] = "command execution failed\n";
+
+    if (input_fd != -1 && duplicate_to(input_fd, STDIN_FILENO) != 0) {
+        _exit(126);
+    }
+    if (output_fd != -1 && duplicate_to(output_fd, STDOUT_FILENO) != 0) {
+        _exit(126);
+    }
+    close_pipe_end_after_dup(read_fd, input_fd, output_fd);
+    if (write_fd != read_fd) {
+        close_pipe_end_after_dup(write_fd, input_fd, output_fd);
+    }
+    execvp(argv[0], argv);
+    saved_errno = errno;
+    (void)write(STDERR_FILENO, message, sizeof message - 1);
+    _exit(saved_errno == ENOENT ? 127 : 126);
+}
+
+/* [Implementation 7] Single command and two-command pipeline */
+static int execute_single(const struct command *command, int *out_status) {
+    pid_t pid = fork();
+    int raw_status;
+
+    if (pid == -1) {
+        return -1;
+    }
+    if (pid == 0) {
+        child_exec(command->argv, -1, -1, -1, -1);
+    }
+    if (wait_retry(pid, &raw_status) != 0) {
+        return -1;
+    }
+    *out_status = public_status(raw_status);
+    return 0;
+}
+
+static int execute_pair(const struct pipeline *pipeline, int *out_status) {
+    int ends[2];
+    pid_t left_pid;
+    pid_t right_pid;
+    int left_status;
+    int right_status;
+    int left_wait;
+    int right_wait;
+
+    if (pipe(ends) == -1) {
+        return -1;
+    }
+    left_pid = fork();
+    if (left_pid == -1) {
+        close_ignored(ends[0]);
+        close_ignored(ends[1]);
+        return -1;
+    }
+    if (left_pid == 0) {
+        child_exec(pipeline->commands[0].argv, -1, ends[1], ends[0], ends[1]);
+    }
+    right_pid = fork();
+    if (right_pid == -1) {
+        close_ignored(ends[0]);
+        close_ignored(ends[1]);
+        (void)kill(left_pid, SIGKILL);
+        (void)wait_retry(left_pid, &left_status);
+        return -1;
+    }
+    if (right_pid == 0) {
+        child_exec(pipeline->commands[1].argv, ends[0], -1, ends[0], ends[1]);
+    }
+    close_ignored(ends[0]);
+    close_ignored(ends[1]);
+    left_wait = wait_retry(left_pid, &left_status);
+    right_wait = wait_retry(right_pid, &right_status);
+    if (left_wait != 0 || right_wait != 0) {
+        return -1;
+    }
+    *out_status = public_status(right_status);
+    return 0;
+}
+
+static int execute_pipeline(const struct pipeline *pipeline, int *out_status) {
+    if (pipeline->count == 1) {
+        return execute_single(&pipeline->commands[0], out_status);
+    }
+    return execute_pair(pipeline, out_status);
+}
+
+/* [Implementation 8] CLI exit status and cleanup */
 int main(int argc, char *argv[]) {
     struct pipeline pipeline;
     const char *error = "unknown error";
+    int status;
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <command string>\n", argv[0]);
@@ -304,16 +457,11 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Syntax error: %s\n", error);
         return 2;
     }
-    for (size_t command_index = 0; command_index < pipeline.count; command_index++) {
-        for (size_t argument_index = 0;
-             argument_index < pipeline.commands[command_index].argc;
-             argument_index++) {
-            printf("command[%zu].argv[%zu]=<%s>\n",
-                   command_index,
-                   argument_index,
-                   pipeline.commands[command_index].argv[argument_index]);
-        }
+    if (execute_pipeline(&pipeline, &status) != 0) {
+        fprintf(stderr, "Execution error: process lifecycle failed\n");
+        pipeline_destroy(&pipeline);
+        return 125;
     }
     pipeline_destroy(&pipeline);
-    return 0;
+    return status;
 }
