@@ -7,5 +7,7 @@ from . import control
 from . import pipeline
 from . import cache
 from . import vm
+from . import predictor
+from . import rob
 
-__all__ = ['bits', 'isa', 'perf', 'control', 'pipeline', 'cache', 'vm']
+__all__ = ['bits', 'isa', 'perf', 'control', 'pipeline', 'cache', 'vm', 'predictor', 'rob']
