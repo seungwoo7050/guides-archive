@@ -1,0 +1,10 @@
+from __future__ import annotations
+import unittest
+import verified_algorithms.ranges
+
+class HistoricalStageTests(unittest.TestCase):
+    def test_stage_is_importable(self) -> None:
+        self.assertTrue('ranges')
+
+if __name__ == '__main__':
+    unittest.main()
