@@ -1,10 +1,620 @@
 from __future__ import annotations
+
+from collections import Counter
+from itertools import combinations, product
+from pathlib import Path
+import random
+import sys
 import unittest
-import verified_algorithms.strings
 
-class HistoricalStageTests(unittest.TestCase):
-    def test_stage_is_importable(self) -> None:
-        self.assertTrue('strings')
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+sys.path.insert(0, str(SRC))
 
-if __name__ == '__main__':
+import verified_algorithms as subject
+
+
+# [Implementation 14]
+# Independent contract verification
+# 후보 구현과 다른 계산 방법을 사용해 같은 결함을 공유할 가능성을 줄입니다.
+def all_pairs_distances(
+    size: int,
+    edges: list[tuple[int, int, int]],
+) -> list[list[int | None]]:
+    distance: list[list[int | None]] = [[None] * size for _ in range(size)]
+    for vertex in range(size):
+        distance[vertex][vertex] = 0
+    for source, target, weight in edges:
+        current = distance[source][target]
+        if current is None or weight < current:
+            distance[source][target] = weight
+    for middle in range(size):
+        for source in range(size):
+            if distance[source][middle] is None:
+                continue
+            for target in range(size):
+                if distance[middle][target] is None:
+                    continue
+                candidate = distance[source][middle] + distance[middle][target]
+                current = distance[source][target]
+                if current is None or candidate < current:
+                    distance[source][target] = candidate
+    return distance
+
+
+def brute_interval_count(intervals: list[tuple[int, int]]) -> int:
+    best = 0
+    for count in range(len(intervals) + 1):
+        for subset in combinations(intervals, count):
+            ordered = sorted(subset)
+            if all(
+                left[1] <= right[0]
+                for left, right in zip(ordered, ordered[1:])
+            ):
+                best = max(best, count)
+    return best
+
+
+def deterministic_interval_selection(
+    intervals: list[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    selected: list[tuple[int, int]] = []
+    last_stop: int | None = None
+    for interval in sorted(intervals, key=lambda item: (item[1], item[0])):
+        start, stop = interval
+        if last_stop is None or start >= last_stop:
+            selected.append(interval)
+            last_stop = stop
+    return selected
+
+
+def brute_knapsack(items: list[tuple[int, int]], capacity: int) -> int:
+    best = 0
+    for count in range(len(items) + 1):
+        for selected in combinations(range(len(items)), count):
+            weight = sum(items[index][0] for index in selected)
+            if weight <= capacity:
+                best = max(
+                    best,
+                    sum(items[index][1] for index in selected),
+                )
+    return best
+
+
+def valid_red_black_tree(root: object) -> tuple[bool, int | None]:
+    if root is not None and root.color != "black":
+        return False, None
+
+    def visit(node: object, lower: int | None, upper: int | None) -> int | None:
+        if node is None:
+            return 1
+        if node.color not in {"red", "black"}:
+            return None
+        if lower is not None and node.key <= lower:
+            return None
+        if upper is not None and node.key >= upper:
+            return None
+        if node.color == "red" and (
+            (node.left is not None and node.left.color == "red")
+            or (node.right is not None and node.right.color == "red")
+        ):
+            return None
+        left_height = visit(node.left, lower, node.key)
+        right_height = visit(node.right, node.key, upper)
+        if (
+            left_height is None
+            or right_height is None
+            or left_height != right_height
+        ):
+            return None
+        return left_height + (1 if node.color == "black" else 0)
+
+    height = visit(root, None, None)
+    return height is not None, height
+
+
+def complete_tree(colors: tuple[str, ...]) -> object:
+    nodes = {
+        key: subject.RedBlackNode(key, color)
+        for key, color in zip((4, 2, 6, 1, 3, 5, 7), colors)
+    }
+    nodes[4].left, nodes[4].right = nodes[2], nodes[6]
+    nodes[2].left, nodes[2].right = nodes[1], nodes[3]
+    nodes[6].left, nodes[6].right = nodes[5], nodes[7]
+    return nodes[4]
+
+
+def brute_mst_weight(
+    vertex_count: int,
+    edges: list[tuple[int, int, int]],
+) -> int:
+    if vertex_count == 0:
+        return 0
+    best: int | None = None
+    for chosen in combinations(edges, vertex_count - 1):
+        groups = list(range(vertex_count))
+
+        def find(vertex: int) -> int:
+            while groups[vertex] != vertex:
+                vertex = groups[vertex]
+            return vertex
+
+        acyclic = True
+        for source, target, _weight in chosen:
+            left_root, right_root = find(source), find(target)
+            if left_root == right_root:
+                acyclic = False
+                break
+            groups[right_root] = left_root
+        if acyclic and len({find(vertex) for vertex in range(vertex_count)}) == 1:
+            weight = sum(edge[2] for edge in chosen)
+            best = weight if best is None else min(best, weight)
+    if best is None:
+        raise ValueError("no spanning tree exists")
+    return best
+
+
+def canonical_undirected_edge(
+    edge: tuple[int, int, int],
+) -> tuple[int, int, int]:
+    source, target, weight = edge
+    return min(source, target), max(source, target), weight
+
+
+def is_spanning_tree(
+    vertex_count: int,
+    chosen: list[tuple[int, int, int]],
+) -> bool:
+    if vertex_count == 0:
+        return chosen == []
+    if len(chosen) != vertex_count - 1:
+        return False
+
+    groups = list(range(vertex_count))
+
+    def find(vertex: int) -> int:
+        while groups[vertex] != vertex:
+            vertex = groups[vertex]
+        return vertex
+
+    for source, target, _weight in chosen:
+        if not 0 <= source < vertex_count or not 0 <= target < vertex_count:
+            return False
+        left_root, right_root = find(source), find(target)
+        if left_root == right_root:
+            return False
+        groups[right_root] = left_root
+    return len({find(vertex) for vertex in range(vertex_count)}) == 1
+
+
+def brute_min_cut(capacity: list[list[int]], source: int, sink: int) -> int:
+    vertices = [
+        vertex
+        for vertex in range(len(capacity))
+        if vertex not in {source, sink}
+    ]
+    best: int | None = None
+    for mask in range(1 << len(vertices)):
+        source_side = {source}
+        source_side.update(
+            vertex
+            for index, vertex in enumerate(vertices)
+            if mask & (1 << index)
+        )
+        cut = sum(
+            capacity[left][right]
+            for left in source_side
+            for right in range(len(capacity))
+            if right not in source_side
+        )
+        best = cut if best is None else min(best, cut)
+    assert best is not None
+    return best
+
+
+# 최대 유량 값만 맞아도 잘못된 matrix를 반환할 수 있으므로 capacity와 보존 법칙을 따로 검사합니다.
+def flow_certificate_errors(
+    capacity: list[list[int]],
+    source: int,
+    sink: int,
+    value: int,
+    flow: list[list[int]],
+) -> list[str]:
+    size = len(capacity)
+    errors: list[str] = []
+    if not isinstance(value, int):
+        errors.append("flow value is not an integer")
+    if not isinstance(flow, list) or len(flow) != size:
+        return errors + ["flow row count differs from capacity"]
+    if any(not isinstance(row, list) or len(row) != size for row in flow):
+        return errors + ["flow is not a square matrix"]
+
+    for left in range(size):
+        for right in range(size):
+            amount = flow[left][right]
+            if not isinstance(amount, int):
+                errors.append(f"flow[{left}][{right}] is not an integer")
+            elif not 0 <= amount <= capacity[left][right]:
+                errors.append(f"flow[{left}][{right}] violates capacity")
+
+    if errors:
+        return errors
+    if source == sink:
+        if value != 0 or any(amount for row in flow for amount in row):
+            errors.append("source == sink did not return zero flow")
+        return errors
+
+    incoming = [
+        sum(flow[left][vertex] for left in range(size))
+        for vertex in range(size)
+    ]
+    outgoing = [sum(flow[vertex]) for vertex in range(size)]
+    if outgoing[source] - incoming[source] != value:
+        errors.append("source net outflow differs from value")
+    if incoming[sink] - outgoing[sink] != value:
+        errors.append("sink net inflow differs from value")
+    for vertex in range(size):
+        if vertex not in {source, sink} and incoming[vertex] != outgoing[vertex]:
+            errors.append(f"flow conservation fails at vertex {vertex}")
+    return errors
+
+
+def brute_lcs_length(left: str, right: str) -> int:
+    def is_subsequence(candidate: str, text: str) -> bool:
+        position = 0
+        for character in text:
+            if position < len(candidate) and candidate[position] == character:
+                position += 1
+        return position == len(candidate)
+
+    shorter, longer = (
+        (left, right) if len(left) <= len(right) else (right, left)
+    )
+    best = 0
+    for mask in range(1 << len(shorter)):
+        candidate = "".join(
+            character
+            for index, character in enumerate(shorter)
+            if mask & (1 << index)
+        )
+        if len(candidate) > best and is_subsequence(candidate, longer):
+            best = len(candidate)
+    return best
+
+
+class DataStructureTests(unittest.TestCase):
+    def test_prefix_contract_and_random_ranges(self) -> None:
+        self.assertEqual(subject.prefix_sums([]), [0])
+        self.assertEqual(subject.prefix_sums([3, -2, 5]), [0, 3, 1, 6])
+
+        source = random.Random(20241214)
+        values = [source.randrange(-20, 21) for _ in range(80)]
+        prefix = subject.prefix_sums(values)
+        self.assertEqual(len(prefix), len(values) + 1)
+        for _ in range(250):
+            start = source.randrange(len(values) + 1)
+            stop = source.randrange(start, len(values) + 1)
+            self.assertEqual(
+                subject.range_sum(prefix, start, stop),
+                sum(values[start:stop]),
+            )
+
+    def test_range_sum_rejects_invalid_half_open_ranges(self) -> None:
+        prefix = subject.prefix_sums([1, 2, 3])
+        for start, stop in [(-1, 1), (2, 1), (0, 4), (4, 4)]:
+            with self.subTest(start=start, stop=stop):
+                with self.assertRaises(ValueError):
+                    subject.range_sum(prefix, start, stop)
+
+    def test_lower_bound_matches_bisect_with_duplicates(self) -> None:
+        from bisect import bisect_left
+
+        cases = [[], [1], [1, 1, 1], [-3, -1, 0, 0, 4, 9]]
+        source = random.Random(20250102)
+        cases.append(sorted(source.randrange(-30, 31) for _ in range(120)))
+        for values in cases:
+            for target in range(-35, 36):
+                self.assertEqual(
+                    subject.lower_bound(values, target),
+                    bisect_left(values, target),
+                )
+
+    def test_red_black_all_complete_tree_colorings(self) -> None:
+        self.assertEqual(subject.red_black_height(None), 1)
+        for colors in product(("red", "black"), repeat=7):
+            tree = complete_tree(colors)
+            expected_valid, expected_height = valid_red_black_tree(tree)
+            if expected_valid:
+                self.assertEqual(
+                    subject.red_black_height(tree),
+                    expected_height,
+                )
+            else:
+                with self.assertRaises(ValueError):
+                    subject.red_black_height(tree)
+
+    def test_red_black_rejects_bst_and_color_errors(self) -> None:
+        with self.assertRaises(ValueError):
+            subject.red_black_height(subject.RedBlackNode(2, "blue"))
+
+        bad_order = subject.RedBlackNode(
+            4,
+            "black",
+            left=subject.RedBlackNode(5, "black"),
+            right=subject.RedBlackNode(6, "black"),
+        )
+        with self.assertRaises(ValueError):
+            subject.red_black_height(bad_order)
+
+
+class DesignTechniqueTests(unittest.TestCase):
+    def test_knapsack_matches_subset_enumeration(self) -> None:
+        source = random.Random(20250130)
+        self.assertEqual(subject.knapsack_01([], 0), 0)
+        for _ in range(70):
+            items = [
+                (source.randrange(1, 8), source.randrange(-3, 16))
+                for _ in range(8)
+            ]
+            capacity = source.randrange(0, 20)
+            self.assertEqual(
+                subject.knapsack_01(items, capacity),
+                brute_knapsack(items, capacity),
+            )
+
+    def test_knapsack_rejects_invalid_contract(self) -> None:
+        with self.assertRaises(ValueError):
+            subject.knapsack_01([], -1)
+        with self.assertRaises(ValueError):
+            subject.knapsack_01([(0, 5)], 10)
+        with self.assertRaises(ValueError):
+            subject.knapsack_01([(-2, 5)], 10)
+
+    def test_interval_selection_matches_exhaustive_optimum(self) -> None:
+        source = random.Random(20250201)
+        specific = [(0, 100), (1, 2), (2, 3), (3, 4)]
+        self.assertEqual(len(subject.select_intervals(specific)), 3)
+        tied = [(1, 3), (0, 3), (3, 4)]
+        self.assertEqual(
+            subject.select_intervals(tied),
+            [(0, 3), (3, 4)],
+        )
+        for _ in range(80):
+            intervals: list[tuple[int, int]] = []
+            for _ in range(8):
+                start = source.randrange(0, 12)
+                intervals.append((start, start + source.randrange(1, 5)))
+            selected = subject.select_intervals(intervals)
+            self.assertEqual(len(selected), brute_interval_count(intervals))
+            self.assertEqual(
+                selected,
+                deterministic_interval_selection(intervals),
+            )
+            self.assertTrue(
+                all(
+                    left[1] <= right[0]
+                    for left, right in zip(selected, selected[1:])
+                )
+            )
+
+    def test_interval_selection_rejects_invalid_ranges(self) -> None:
+        for intervals in [[(1, 1)], [(3, 2)], [(0, 1), (5, 4)]]:
+            with self.assertRaises(ValueError):
+                subject.select_intervals(intervals)
+
+    def test_lcs_matches_subsequence_enumeration(self) -> None:
+        source = random.Random(20250205)
+        self.assertEqual(subject.lcs_length("", ""), 0)
+        self.assertEqual(subject.lcs_length("abc", "abc"), 3)
+        self.assertEqual(subject.lcs_length("abc", "def"), 0)
+        for _ in range(100):
+            left = "".join(
+                source.choice("abcd")
+                for _ in range(source.randrange(9))
+            )
+            right = "".join(
+                source.choice("abcd")
+                for _ in range(source.randrange(9))
+            )
+            self.assertEqual(
+                subject.lcs_length(left, right),
+                brute_lcs_length(left, right),
+            )
+
+
+class GraphTests(unittest.TestCase):
+    def test_bfs_distances_against_unit_weight_floyd_warshall(self) -> None:
+        source = random.Random(20250111)
+        self.assertEqual(subject.bfs_distances([[]], 0), [0])
+        for _ in range(50):
+            size = 7
+            graph = [
+                [
+                    target
+                    for target in range(size)
+                    if target != vertex and source.random() < 0.25
+                ]
+                for vertex in range(size)
+            ]
+            edges = [
+                (vertex, target, 1)
+                for vertex, neighbors in enumerate(graph)
+                for target in neighbors
+            ]
+            expected = all_pairs_distances(size, edges)[0]
+            self.assertEqual(subject.bfs_distances(graph, 0), expected)
+
+    def test_bfs_rejects_invalid_vertices(self) -> None:
+        with self.assertRaises(ValueError):
+            subject.bfs_distances([], 0)
+        with self.assertRaises(ValueError):
+            subject.bfs_distances([[1], [2]], 0)
+
+    def test_dijkstra_matches_independent_all_pairs(self) -> None:
+        source = random.Random(20250118)
+        for _ in range(45):
+            size = 8
+            edges = [
+                (left, right, source.randrange(0, 10))
+                for left in range(size)
+                for right in range(size)
+                if left != right and source.random() < 0.2
+            ]
+            self.assertEqual(
+                subject.dijkstra(size, iter(edges), 0),
+                all_pairs_distances(size, edges)[0],
+            )
+
+    def test_dijkstra_rejects_negative_edges_and_bad_vertices(self) -> None:
+        with self.assertRaises(ValueError):
+            subject.dijkstra(2, [(0, 1, -1)], 0)
+        with self.assertRaises(ValueError):
+            subject.dijkstra(2, [(0, 2, 1)], 0)
+
+    def test_bellman_ford_handles_negative_edges_and_cycle_contract(self) -> None:
+        source = random.Random(20250125)
+        for _ in range(50):
+            size = 7
+            edges = [
+                (left, right, source.randrange(-5, 10))
+                for left in range(size)
+                for right in range(left + 1, size)
+                if source.random() < 0.35
+            ]
+            self.assertEqual(
+                subject.bellman_ford(size, edges, 0),
+                all_pairs_distances(size, edges)[0],
+            )
+
+        with self.assertRaises(ValueError):
+            subject.bellman_ford(
+                3,
+                [(0, 1, 1), (1, 2, -2), (2, 1, -2)],
+                0,
+            )
+
+        self.assertEqual(
+            subject.bellman_ford(
+                4,
+                [(0, 1, 3), (2, 3, -2), (3, 2, -2)],
+                0,
+            ),
+            [0, 3, None, None],
+        )
+
+    def test_kruskal_matches_spanning_tree_enumeration(self) -> None:
+        self.assertEqual(subject.kruskal_mst(0, []), (0, []))
+        source = random.Random(20250215)
+        for _ in range(40):
+            size = 5
+            edges = [
+                (vertex - 1, vertex, source.randrange(1, 15))
+                for vertex in range(1, size)
+            ]
+            present = {(edge[0], edge[1]) for edge in edges}
+            edges.extend(
+                (left, right, source.randrange(1, 15))
+                for left in range(size)
+                for right in range(left + 1, size)
+                if (left, right) not in present and source.random() < 0.35
+            )
+            weight, chosen = subject.kruskal_mst(size, iter(edges))
+            self.assertEqual(weight, brute_mst_weight(size, edges))
+            self.assertEqual(len(chosen), size - 1)
+            available = Counter(
+                canonical_undirected_edge(edge)
+                for edge in edges
+            )
+            returned = Counter(
+                canonical_undirected_edge(edge)
+                for edge in chosen
+            )
+            self.assertFalse(returned - available)
+            self.assertEqual(weight, sum(edge[2] for edge in chosen))
+            self.assertTrue(is_spanning_tree(size, chosen))
+
+    def test_kruskal_rejects_disconnected_graph(self) -> None:
+        with self.assertRaises(ValueError):
+            subject.kruskal_mst(4, [(0, 1, 1), (2, 3, 1)])
+
+    def test_max_flow_value_and_certificate_match_all_cuts(self) -> None:
+        source = random.Random(20250222)
+        specific = [
+            [0, 3, 2, 0],
+            [0, 0, 1, 2],
+            [0, 0, 0, 3],
+            [0, 0, 0, 0],
+        ]
+        value, flow = subject.max_flow(specific, 0, 3)
+        self.assertEqual(value, 5)
+        self.assertEqual(
+            flow_certificate_errors(specific, 0, 3, value, flow),
+            [],
+        )
+        for _ in range(50):
+            size = 6
+            capacity = [
+                [
+                    source.randrange(1, 9)
+                    if left != right and source.random() < 0.3
+                    else 0
+                    for right in range(size)
+                ]
+                for left in range(size)
+            ]
+            value, flow = subject.max_flow(capacity, 0, size - 1)
+            self.assertEqual(
+                value,
+                brute_min_cut(capacity, 0, size - 1),
+            )
+            self.assertEqual(
+                flow_certificate_errors(
+                    capacity,
+                    0,
+                    size - 1,
+                    value,
+                    flow,
+                ),
+                [],
+            )
+
+    def test_max_flow_contract_errors(self) -> None:
+        with self.assertRaises(ValueError):
+            subject.max_flow([[0, 1], [0]], 0, 1)
+        with self.assertRaises(ValueError):
+            subject.max_flow([[0, -1], [0, 0]], 0, 1)
+        self.assertEqual(subject.max_flow([[0]], 0, 0), (0, [[0]]))
+
+
+class StringTests(unittest.TestCase):
+    def test_kmp_matches_builtin_find(self) -> None:
+        cases = [
+            ("", ""),
+            ("", "a"),
+            ("aaaa", "aa"),
+            ("abababac", "ababac"),
+            ("abc", "abcd"),
+            ("needle in a haystack", "hay"),
+        ]
+        for text, pattern in cases:
+            self.assertEqual(subject.kmp_find(text, pattern), text.find(pattern))
+
+        source = random.Random(20250208)
+        alphabet = "abca"
+        for _ in range(400):
+            text = "".join(
+                source.choice(alphabet)
+                for _ in range(source.randrange(30))
+            )
+            pattern = "".join(
+                source.choice(alphabet)
+                for _ in range(source.randrange(10))
+            )
+            self.assertEqual(
+                subject.kmp_find(text, pattern),
+                text.find(pattern),
+            )
+
+
+if __name__ == "__main__":
     unittest.main()
