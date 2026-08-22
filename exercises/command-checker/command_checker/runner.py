@@ -37,3 +37,29 @@ def run_cases(
         raise SpecificationError("jobs must be at least 1")
     if jobs == 1:
         return tuple(run_case(case, command) for case in cases)
+
+    # [Implementation 9] Run cases with bounded workers while preserving input order.
+    try:
+        with ThreadPoolExecutor(max_workers=jobs) as executor:
+            return tuple(executor.map(lambda case: run_case(case, command), cases))
+    except OSError as error:
+        raise ExecutionError(f"cannot create execution workers: {error}") from error
+
+
+# [Implementation 6-1] Send passing and failing results to the appropriate streams.
+def print_results(
+    results: Sequence[Result],
+    *,
+    stdout: TextIO,
+    stderr: TextIO,
+) -> None:
+    for result in results:
+        destination = stdout if result.passed else stderr
+        print(("PASS " if result.passed else "FAIL ") + result.name, file=destination)
+        for failure in result.failures:
+            print(f"  - {failure}", file=destination)
+
+
+# [Implementation 6-2] Return success only when every case matches.
+def exit_status(results: Sequence[Result]) -> int:
+    return 0 if all(result.passed for result in results) else 1
