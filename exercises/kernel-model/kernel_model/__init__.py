@@ -3,5 +3,6 @@
 from . import lifecycle
 from . import synchronization
 from . import scheduler
+from . import deadlock
 
-__all__ = ['lifecycle', 'synchronization', 'scheduler']
+__all__ = ['lifecycle', 'synchronization', 'scheduler', 'deadlock']
