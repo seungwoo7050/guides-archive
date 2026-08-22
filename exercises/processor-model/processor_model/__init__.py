@@ -1,13 +1,16 @@
-"""Public modules available at this historical stage."""
+"""외부 패키지 없이 실행할 수 있는 프로세서 상태 모델 모음입니다."""
 
-from . import bits
-from . import isa
-from . import perf
-from . import control
-from . import pipeline
-from . import cache
-from . import vm
-from . import predictor
-from . import rob
+__all__ = [
+    "bits",
+    "cache",
+    "coherence",
+    "control",
+    "isa",
+    "perf",
+    "pipeline",
+    "predictor",
+    "rob",
+    "vm",
+]
 
-__all__ = ['bits', 'isa', 'perf', 'control', 'pipeline', 'cache', 'vm', 'predictor', 'rob']
+__version__ = "1.0.0"
