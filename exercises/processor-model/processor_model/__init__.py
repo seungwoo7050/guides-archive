@@ -5,5 +5,6 @@ from . import isa
 from . import perf
 from . import control
 from . import pipeline
+from . import cache
 
-__all__ = ['bits', 'isa', 'perf', 'control', 'pipeline']
+__all__ = ['bits', 'isa', 'perf', 'control', 'pipeline', 'cache']
