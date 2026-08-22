@@ -4,5 +4,6 @@ from . import checksum
 from . import packet
 from . import errors
 from . import pcap
+from . import routing
 
-__all__ = ['checksum', 'packet', 'errors', 'pcap']
+__all__ = ['checksum', 'packet', 'errors', 'pcap', 'routing']
