@@ -2,5 +2,6 @@
 
 from . import bits
 from . import isa
+from . import perf
 
-__all__ = ['bits', 'isa']
+__all__ = ['bits', 'isa', 'perf']
