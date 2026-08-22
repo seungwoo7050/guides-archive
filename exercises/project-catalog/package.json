@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "test:e2e": "npm run build && node scripts/run-playwright.mjs"
   },
   "dependencies": {
     "next": "16.3.0",
@@ -22,6 +23,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "typescript": "5.9.3",
-    "vitest": "3.2.7"
+    "vitest": "3.2.7",
+    "@playwright/test": "1.61.1"
   }
 }
