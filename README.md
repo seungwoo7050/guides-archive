@@ -1,114 +1,184 @@
 # 데이터베이스 시스템
 
-관계형 데이터베이스의 논리적 의미부터 저장 방식, 동시성, 복구, 실행 계획과 안전한 변경까지 연결해서 학습하는 저장소입니다.
+이 브랜치는 관계형 데이터베이스의 논리적 의미, 저장 방식, 동시성, 복구, 실행 계획과 안전한 변경을 연결합니다. SQL 문법만 익히는 입문 과정도 아니고, 모든 개발자에게 저장 엔진 구현을 선행 조건으로 요구하는 과정도 아닙니다.
 
-이 저장소는 SQL 문법 입문서가 아닙니다. 간단한 table을 만들고 `SELECT`, `INSERT`, `UPDATE`, `DELETE`를 작성해 본 개발자를 대상으로 합니다. 문서를 모두 읽은 뒤 한꺼번에 구현하지 않고, 필요한 개념을 익힌 즉시 해당 독립 프로젝트를 실행하고 다시 만들어 봅니다.
+학습 목적에 따라 다음 두 경로를 제공합니다.
 
-## 완료 후 갖춰야 할 능력
+```text
+애플리케이션 데이터 경로
+    정확한 SQL·제약·트랜잭션·인덱스·마이그레이션
 
-전체 필수 과정을 마치면 다음을 설명하고 재현할 수 있어야 합니다.
+DBMS 내부구조 경로
+    page·index·buffer pool·MVCC/WAL·질의 실행
+```
 
-- relation, tuple, key와 SQL의 bag 의미를 구분하고 `NULL`, 외부 조인, 집계, 정렬 오류를 찾습니다.
-- 업무 규칙을 candidate key, foreign key, `UNIQUE`, `CHECK`, `NOT NULL`로 표현합니다.
-- tuple이 record와 page에 저장되고 `(page_id, slot_id)`로 참조되는 과정을 추적합니다.
-- B+ tree의 탐색·분할·범위 조회와 composite·partial·covering index의 적용 조건을 설명합니다.
-- buffer pool의 page table, pin, dirty, Clock 교체와 flush 순서를 추적합니다.
-- lost update, write skew, deadlock과 재시도 조건을 실제 PostgreSQL 동시 실행으로 확인합니다.
-- MVCC, WAL, LSN, `page_lsn`, REDO와 UNDO를 crash 시점별로 설명합니다.
-- 논리 질의와 물리 실행 계획을 구분하고 join, sort, 통계와 `EXPLAIN ANALYZE`를 근거로 판단합니다.
-- 새 필드 추가, 기존 데이터 채우기, 검증, 이전 형식 제거 순서로 데이터를 안전하게 변경합니다.
+두 경로를 모두 마치면 애플리케이션의 질의와 DBMS 내부 동작을 하나의 요청에서 연결해 설명할 수 있습니다.
 
-## 필수 학습 경로
+## 대상 독자와 선행 지식
 
-세부 순서는 [`docs/00-roadmap.md`](docs/00-roadmap.md)에 있습니다. 전체 경로는 다음과 같습니다.
+- 간단한 table을 만들고 `SELECT`, `INSERT`, `UPDATE`, `DELETE`를 작성합니다.
+- Python 프로젝트와 테스트를 실행합니다.
+- Docker Engine과 Docker Compose를 사용할 수 있으면 PostgreSQL 실습을 수행할 수 있습니다.
+
+SQL 자체가 처음이라면 먼저 작은 애플리케이션 프로젝트에서 기본 CRUD를 사용한 뒤 돌아오는 편이 낫습니다.
+
+## 공통 완료 능력
+
+- relation, tuple, key와 SQL의 bag 의미를 구분합니다.
+- `NULL`, 외부 조인, 집계와 정렬에서 생기는 오류를 찾습니다.
+- 업무 규칙을 key, foreign key, `UNIQUE`, `CHECK`, `NOT NULL`로 표현합니다.
+- lost update, write skew, deadlock과 재시도 조건을 확인합니다.
+- 논리 질의와 물리 실행 계획을 구분합니다.
+- schema와 index를 기존 데이터와 실행 중 요청을 고려해 변경합니다.
+
+내부구조 경로를 추가로 마치면 다음도 수행합니다.
+
+- tuple이 record와 page에 저장되는 과정을 추적합니다.
+- B+ tree의 탐색, 분할과 범위 조회를 설명합니다.
+- buffer pool의 pin, dirty, 교체와 flush 순서를 추적합니다.
+- MVCC, WAL, LSN, REDO와 UNDO를 장애 시점별로 설명합니다.
+- join 알고리즘과 실행 비용을 비교합니다.
+
+## 저장소 구성
+
+```text
+.
+├── README.md
+├── docs/
+└── exercises/
+    ├── sql-semantics-views/
+    ├── ticketing-database/
+    ├── slotted-page/
+    ├── bplus-tree/
+    ├── clock-buffer-pool/
+    ├── postgres-concurrency-guards/
+    ├── wal-recovery-simulator/
+    ├── join-algorithms/
+    ├── postgres-workload-indexes/
+    └── mini-storage-engine/
+```
+
+## 경로 A — 애플리케이션 데이터
+
+웹, 백엔드와 게임 서비스에서 관계형 데이터베이스를 안전하게 사용하려면 이 경로를 먼저 선택합니다.
 
 ```text
 관계 모델과 SQL 의미
-→ sql-semantics-views
-
-스키마와 제약
-→ ticketing-database의 schema 구간
-
-페이지와 레코드
-→ slotted-page
-
-인덱스
-→ bplus-tree
-
-버퍼 풀
-→ clock-buffer-pool
-
-트랜잭션과 잠금
-→ postgres-concurrency-guards
-
-MVCC와 WAL 복구
-→ wal-recovery-simulator
-
-질의 실행
-→ join-algorithms
-
-통계와 실행 계획
-→ postgres-workload-indexes
-
-안전한 schema·index·migration 변경
-→ ticketing-database 완성
-
-시스템 종합 검토
-→ 전체 필수 exercise 재검증
+→ schema와 제약
+→ transaction과 동시 실행
+→ index와 실행 계획
+→ 안전한 migration과 backfill
 ```
 
-필수 exercise는 다음 9개입니다.
+### 필수 실습
 
 - [`sql-semantics-views`](exercises/sql-semantics-views/)
 - [`ticketing-database`](exercises/ticketing-database/)
+- [`postgres-concurrency-guards`](exercises/postgres-concurrency-guards/)
+- [`postgres-workload-indexes`](exercises/postgres-workload-indexes/)
+
+### 완료 후 할 수 있어야 하는 일
+
+- 업무 규칙을 schema 제약과 transaction으로 표현합니다.
+- 동시 요청에서 잃어버린 갱신과 write skew를 재현합니다.
+- 실제 실행 계획과 측정 결과를 보고 index를 선택합니다.
+- 필드 추가, 기존 데이터 채우기, 검증과 이전 형식 제거 순서를 설계합니다.
+
+## 경로 B — DBMS 내부구조
+
+저장 엔진, 데이터베이스 성능, 복구와 내부 구현을 학습하려면 이 경로를 선택합니다.
+
+```text
+page와 record
+→ B+ tree
+→ buffer pool
+→ MVCC와 WAL 복구
+→ join 실행
+```
+
+### 필수 실습
+
 - [`slotted-page`](exercises/slotted-page/)
 - [`bplus-tree`](exercises/bplus-tree/)
 - [`clock-buffer-pool`](exercises/clock-buffer-pool/)
-- [`postgres-concurrency-guards`](exercises/postgres-concurrency-guards/)
 - [`wal-recovery-simulator`](exercises/wal-recovery-simulator/)
 - [`join-algorithms`](exercises/join-algorithms/)
-- [`postgres-workload-indexes`](exercises/postgres-workload-indexes/)
 
-## 선택 자료
+애플리케이션 개발자가 이 경로 전체를 프로젝트 진입 전에 수행할 필요는 없습니다. page, WAL 또는 join 비용을 실제로 조사해야 할 때 해당 실습부터 시작할 수 있습니다.
 
-다음 문서는 필수 개념을 하나의 시나리오로 다시 묶는 참고 자료입니다.
+## 전체 통합 경로
 
-- [`애플리케이션 데이터베이스 검토`](docs/05-capstones/01-application-database-review.md)
-- [`미니 저장 엔진`](docs/05-capstones/02-mini-storage-engine.md)
+두 경로를 모두 마치면 다음 순서로 종합 검토합니다.
 
-[`mini-storage-engine`](exercises/mini-storage-engine/)은 page, buffer pool, WAL과 index를 한 프로그램으로 다시 연결하는 선택 통합 프로젝트입니다. 앞선 전용 exercise를 대체하지 않으며, 내부 저장 동작을 한 파일에서 끝까지 추적해 보고 싶을 때 수행합니다.
+```text
+하나의 ticket 생성 요청
+→ schema와 transaction
+→ record와 page
+→ index와 buffer pool
+→ WAL과 장애 복구
+→ 조회 plan과 결과 검증
+```
 
-## 프로젝트 실행
+[`mini-storage-engine`](exercises/mini-storage-engine/)은 page, buffer pool, WAL과 index를 한 프로그램으로 연결하는 선택 통합 프로젝트입니다. 전용 실습을 대체하지 않습니다.
 
-각 프로젝트는 부모 저장소의 스크립트나 설정에 의존하지 않습니다.
+## 문서 지도
 
-Python 프로젝트:
+정확한 문서 순서는 [`docs/00-roadmap.md`](docs/00-roadmap.md)에 있습니다.
 
-```bash
+- 관계 의미와 설계: `docs/01-*`
+- 저장과 index: `docs/02-*`
+- transaction과 복구: `docs/03-*`
+- 질의 실행과 최적화: `docs/04-*`
+- 통합 검토: `docs/05-capstones/`
+
+## 다른 개발 트랙에서 사용하는 방법
+
+### 웹·백엔드
+
+경로 A를 사용합니다. 다음 문제가 나타나면 경로 B의 일부를 JIT로 읽습니다.
+
+- page와 row 크기 때문에 I/O가 증가함
+- index 구조와 범위 조회 비용을 더 깊게 설명해야 함
+- WAL, checkpoint와 장애 복구를 조사해야 함
+- join 전략과 메모리 사용을 분석해야 함
+
+### 게임 서버
+
+계정, 경제, inventory, matchmaking metadata와 replay metadata에는 경로 A가 우선입니다. 실시간 match state를 관계형 DB에 매 tick 저장하지 않습니다. snapshot, event, cache와 장기 보존의 역할을 먼저 나누고 필요한 transaction과 index만 사용합니다.
+
+### 데이터베이스 엔지니어링
+
+두 경로 전체와 `mini-storage-engine`을 권장합니다.
+
+## 실행과 검증
+
+각 프로젝트는 자신의 디렉터리에서 실행합니다.
+
+```sh
 cd exercises/<project>
 make test
 ```
 
-PostgreSQL 프로젝트:
-
-```bash
-cd exercises/<project>
-make test
-```
-
-PostgreSQL 프로젝트는 Docker Engine과 Docker Compose v2가 필요합니다. 각 README에는 설치 조건, 실행 명령, 주요 설계 판단과 Implementation Order가 있습니다.
+PostgreSQL 프로젝트에는 Docker Engine과 Docker Compose v2가 필요합니다. 자동 검사가 통과하더라도 실제 운영 데이터 크기, backup 자동화, replication과 장애 조치를 검증한 것은 아닙니다.
 
 ## 완료 기준
 
-다음 조건을 모두 만족하면 이 저장소의 필수 과정을 완료한 것입니다.
+### 애플리케이션 경로
 
-- 필수 문서를 읽고 각 문서의 완료 질문에 답할 수 있습니다.
-- 필수 프로젝트 9개의 테스트를 각 프로젝트 디렉터리에서 통과시킵니다.
-- 결과가 맞는 이유뿐 아니라 잘못된 구현이 어떤 테스트에서 실패하는지 설명합니다.
-- 하나의 ticket 생성 요청을 schema, transaction, page, index, buffer pool, WAL과 조회 plan까지 추적합니다.
-- 느린 조회, deadlock, crash 뒤 복구, 대규모 backfill 상황에서 먼저 확인할 증거를 정합니다.
-- 현재 프로젝트가 다루지 않는 범위를 구체적으로 말할 수 있습니다.
+- 경로 A의 필수 프로젝트를 통과합니다.
+- schema, transaction, index와 migration 선택을 근거로 설명합니다.
+- 느린 조회, deadlock과 backfill에서 먼저 확인할 자료를 정합니다.
 
-## 범위
+### 내부구조 경로
 
-이 저장소는 관계형 데이터베이스의 기초 원리와 축소 구현을 다룹니다. 특정 ORM 사용법, 운영 backup 자동화, replication과 sharding, 분산 transaction, 특정 DBMS source code 전체는 포함하지 않습니다. 이러한 주제는 실제 서비스나 운영 요구가 생겼을 때 별도로 학습해야 합니다.
+- 경로 B의 필수 프로젝트를 통과합니다.
+- page, index, buffer pool, WAL과 join의 상태 변화를 설명합니다.
+- 잘못된 구현이 어떤 검사에서 거부되는지 설명합니다.
+
+### 전체 과정
+
+두 경로의 기준을 모두 만족하고 하나의 요청을 논리 의미에서 저장·복구·조회 계획까지 추적합니다.
+
+## 범위 밖
+
+특정 ORM 사용법, 운영 backup 자동화, replication, sharding, 분산 transaction과 특정 DBMS 전체 소스 분석은 포함하지 않습니다. 이러한 주제는 실제 서비스나 전문 과정에서 이어서 학습합니다.
