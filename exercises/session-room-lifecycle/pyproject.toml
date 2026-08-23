@@ -12,5 +12,8 @@ license = {text = "MIT"}
 authors = [{name = "seungwoo7050"}]
 dependencies = []
 
+[project.scripts]
+session-room-lifecycle = "session_room_lifecycle.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
