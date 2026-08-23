@@ -1,0 +1,25 @@
+# 운영체제와 편집기
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# 로그와 임시 파일
+*.log
+*.pid
+*.tmp
+
+# 환경 변수와 비밀값
+.env
+.env.*
+!.env.example
+
+# Java와 Maven
+**/target/
+*.class
+*.jfr
+.classpath
+.project
+.factorypath
+*.iml
