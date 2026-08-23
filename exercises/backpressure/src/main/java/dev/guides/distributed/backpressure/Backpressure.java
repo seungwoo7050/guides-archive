@@ -180,5 +180,3 @@ public final class Backpressure {
     private Backpressure() {
     }
 }
-
-// Historical implementation boundary: commit 27.

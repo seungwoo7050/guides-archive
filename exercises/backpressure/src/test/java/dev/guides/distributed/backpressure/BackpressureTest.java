@@ -94,5 +94,3 @@ public final class BackpressureTest {
         Checks.equals(2, system.expired("payments"), "Deadline expiry must be recorded");
     }
 }
-
-// Historical implementation boundary: commit 27.
