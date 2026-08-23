@@ -220,4 +220,4 @@ public final class RetryBudgetTest {
     }
 }
 
-// Historical implementation boundary: commit 23.
+// Historical implementation boundary: commit 24.
