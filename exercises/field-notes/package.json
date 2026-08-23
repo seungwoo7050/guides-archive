@@ -1,16 +1,35 @@
 {
   "name": "field-notes",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
+  "description": "Offline-first mobile field record application with deterministic sync and release validation tooling",
   "engines": {
     "node": ">=24.19.0 <24.20.0",
     "npm": ">=11.17.0 <11.18.0"
   },
   "packageManager": "npm@11.17.0",
-  "workspaces": ["apps/mobile", "packages/*"],
+  "workspaces": [
+    "apps/mobile",
+    "packages/*"
+  ],
   "scripts": {
-    "typecheck:packages": "tsc --noEmit -p tsconfig.packages.json"
+    "typecheck:packages": "tsc --noEmit -p tsconfig.packages.json",
+    "test": "node --experimental-strip-types --test packages/*/tests/*.test.ts apps/mobile/tests/*.test.mjs",
+    "test:core": "node --experimental-strip-types --test packages/core/tests/*.test.ts",
+    "test:fault-server": "node --experimental-strip-types --test packages/fault-server/tests/*.test.ts",
+    "test:sync-engine": "node --experimental-strip-types --test packages/sync-engine/tests/*.test.ts",
+    "test:lifecycle-engine": "node --experimental-strip-types --test packages/lifecycle-engine/tests/*.test.ts",
+    "test:release-contract": "node --experimental-strip-types --test packages/release-contract/tests/*.test.ts",
+    "verify:source": "node scripts/verify-source.mjs",
+    "validate:fixtures": "npm run validate:fixtures --workspace=@field-notes/release-contract",
+    "validate:eas": "npm run validate:eas --workspace=@field-notes/release-contract",
+    "verify": "npm run verify:source && npm run typecheck:packages && npm test && npm run validate:fixtures && npm run validate:eas",
+    "start": "npm run start --workspace=@field-notes/mobile",
+    "android": "npm run android --workspace=@field-notes/mobile",
+    "ios": "npm run ios --workspace=@field-notes/mobile",
+    "validate:release": "node --experimental-strip-types packages/release-contract/src/cli.ts",
+    "digest:directory-tree": "node --experimental-strip-types packages/release-contract/src/directory-tree-cli.ts"
   },
   "devDependencies": {
     "@types/node": "~26.2.0",
