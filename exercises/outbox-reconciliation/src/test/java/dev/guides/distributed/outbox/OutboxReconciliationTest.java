@@ -140,5 +140,3 @@ public final class OutboxReconciliationTest {
         Checks.equals(1, consumer.effectCount(), "A conflict must not add an effect");
     }
 }
-
-// Historical implementation boundary: commit 14.

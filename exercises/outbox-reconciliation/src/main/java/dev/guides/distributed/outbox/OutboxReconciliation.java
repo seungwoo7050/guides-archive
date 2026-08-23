@@ -368,5 +368,3 @@ public final class OutboxReconciliation {
     private OutboxReconciliation() {
     }
 }
-
-// Historical implementation boundary: commit 14.
