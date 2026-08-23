@@ -8,7 +8,7 @@ class HistoricalStageTest(unittest.TestCase):
         model = root / "src" / "session_room_lifecycle" / "model.py"
         engine = root / "src" / "session_room_lifecycle" / "engine.py"
         self.assertIn("Implementation 1", model.read_text(encoding="utf-8"))
-        self.assertIn("Implementation 3", engine.read_text(encoding="utf-8"))
+        self.assertIn("Implementation 5", engine.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
