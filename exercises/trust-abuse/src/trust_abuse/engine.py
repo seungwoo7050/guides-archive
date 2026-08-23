@@ -333,3 +333,79 @@ class TrustEngine:
         ):
             return None, "INVALID_COMMAND"
         return command, payload_error
+
+    # [Implementation 5]
+    # Session epoch and connection validation
+    # 인증된 세션의 actor, player, connection, epoch와 요청 값을 모두 비교합니다.
+    def _validate_session(self, command: dict[str, Any]) -> tuple[Session | None, str | None]:
+        session = self.sessions.get(command["session_id"])
+        if session is None or not session.active:
+            return None, "SESSION_NOT_ACTIVE"
+        if session.actor_id != command["actor_id"]:
+            return session, "ACTOR_SESSION_MISMATCH"
+        if session.player_id != command["player_id"]:
+            return session, "PLAYER_SESSION_MISMATCH"
+        if session.connection_id != command["connection_id"]:
+            return session, "CONNECTION_MISMATCH"
+        if session.epoch != command["session_epoch"]:
+            return session, "SESSION_EPOCH_MISMATCH"
+        return session, None
+
+    # [Implementation 5-1]
+    # Room, match, and ownership validation
+    # 현재 방과 경기 참가자에게 허용된 entity만 사용할 수 있게 합니다.
+    def _validate_membership(
+        self, command: dict[str, Any]
+    ) -> tuple[Player | None, str | None]:
+        player = self.players.get(command["player_id"])
+        if player is None:
+            return None, "PLAYER_NOT_FOUND"
+        if player.room_id != command["room_id"]:
+            return None, "ROOM_MISMATCH"
+        if player.match_id != command["match_id"]:
+            return None, "MATCH_MISMATCH"
+        room = self.rooms.get(command["room_id"])
+        match = self.matches.get(command["match_id"])
+        if room is None or player.player_id not in room.player_ids:
+            return None, "ROOM_MEMBERSHIP_MISMATCH"
+        if (
+            match is None
+            or match.state != "RUNNING"
+            or match.room_id != room.room_id
+            or player.player_id not in match.player_ids
+        ):
+            return None, "MATCH_NOT_ACTIVE"
+        return player, None
+
+    def _policy_for(self, kind: str) -> RateLimitPolicy:
+        return self.rate_limits.get(kind, self.default_rate_limit)
+
+    # [Implementation 6]
+    # Logical-time token bucket
+    # 실제 시각 대신 이벤트의 logical time으로 token을 보충합니다.
+    def _consume_rate_limit(
+        self,
+        session: Session,
+        player: Player,
+        kind: str,
+        logical_time: int,
+    ) -> tuple[bool, TokenBucket]:
+        policy = self._policy_for(kind)
+        # [Implementation 6-1]
+        # Reconnect-stable rate-limit keys
+        # connection ID를 key에서 빼 reconnect로 기존 제한을 우회하지 못하게 합니다.
+        key = (session.session_id, player.player_id, kind)
+        bucket = self.buckets.get(key)
+        if bucket is None:
+            bucket = TokenBucket(tokens=policy.capacity, last_tick=logical_time)
+            self.buckets[key] = bucket
+        elapsed = max(0, logical_time - bucket.last_tick)
+        bucket.tokens = min(
+            policy.capacity,
+            bucket.tokens + elapsed * policy.refill_per_tick,
+        )
+        bucket.last_tick = logical_time
+        if bucket.tokens <= 0:
+            return False, bucket
+        bucket.tokens -= 1
+        return True, bucket
