@@ -12,5 +12,8 @@ license = {text = "MIT"}
 authors = [{name = "seungwoo7050"}]
 dependencies = []
 
+[project.scripts]
+trust-abuse = "trust_abuse.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
