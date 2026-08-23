@@ -1,118 +1,163 @@
 # 알고리즘 설계와 검증
 
-이 저장소는 기업형 알고리즘 테스트에서 자주 요구하는 핵심 자료구조와 알고리즘을 학습하고, 직접 구현한 결과를 독립적인 기준 계산으로 검증하기 위한 과정입니다. 특정 문제 유형의 풀이를 외우는 대신 다음 순서를 반복합니다.
+이 브랜치는 특정 문제 유형의 풀이를 외우는 대신, 문제를 명확한 입력·출력 조건으로 바꾸고 적절한 자료구조와 알고리즘을 선택한 뒤 독립적인 기준 계산으로 결과를 검증하는 방법을 다룹니다.
 
 ```text
-문제의 입력·출력과 예외 조건을 정합니다.
+요구사항과 예외 조건을 정합니다.
 → 입력 크기에서 허용되는 시간·공간 비용을 계산합니다.
-→ 필요한 상태와 자료구조를 고릅니다.
+→ 필요한 상태와 자료구조를 선택합니다.
 → 정확성 근거를 적고 구현합니다.
 → 다른 계산 방법과 경계 입력으로 결과를 검증합니다.
 ```
 
-문서는 언어에 종속되지 않게 작성했습니다. 실행 프로젝트인 [`verified-algorithms`](exercises/verified-algorithms/)는 Python 3.12 이상을 사용하며 외부 실행 의존성이 없습니다.
+문서는 특정 언어에 종속되지 않습니다. 필수 구현 프로젝트인 [`verified-algorithms`](exercises/verified-algorithms/)는 Python 3.12 이상을 사용합니다.
+
+## 대상 독자와 선행 지식
+
+다음 작업을 해 본 개발자를 대상으로 합니다.
+
+- 한 언어로 함수, 조건문, 반복문과 기본 컬렉션을 사용합니다.
+- 작은 프로그램을 실행하고 실패한 테스트를 읽습니다.
+- 정수 범위와 입력 형식을 확인합니다.
+
+Python 자체를 처음 배우는 과정은 [`python`](https://github.com/seungwoo7050/guides-archive/tree/python) 브랜치가 맡습니다. C++로 같은 내용을 구현하려면 `docs/90-implementation-profiles/cpp20.md`를 함께 사용합니다.
 
 ## 완료 후 갖춰야 할 능력
 
-과정을 마치면 다음 작업을 자료 없이 다시 수행할 수 있어야 합니다.
+전체 과정을 마치면 다음 작업을 자료 없이 다시 수행할 수 있어야 합니다.
 
-- 자연어 문제를 입력, 출력, 답 없음, 잘못된 입력, 동점 처리까지 포함한 명확한 조건으로 정리합니다.
-- 최악·기대·상각 비용을 구분하고, 복사·재귀 stack·출력 크기까지 포함해 시간과 공간을 계산합니다.
-- 반복 불변식, 귀납, 교환 논리, 절단 성질, relaxation 근거로 구현의 정확성을 설명합니다.
-- 배열, hash, stack, queue, deque, heap, tree, DSU를 필요한 연산과 비용에 따라 선택합니다.
-- 완전탐색, greedy, dynamic programming을 적용할 수 있는 조건과 실패 반례를 구분합니다.
-- BFS, Dijkstra, Bellman–Ford, Kruskal, max flow의 전제와 반환값을 설명하고 구현합니다.
-- KMP의 prefix table과 fallback을 구현합니다.
+- 자연어 문제를 입력, 출력, 답 없음, 잘못된 입력과 동점 처리까지 포함한 조건으로 정리합니다.
+- 최악·기대·상각 비용을 구분하고 복사, 재귀 호출 스택과 출력 크기까지 포함해 비용을 계산합니다.
+- 반복 불변식, 귀납, 교환 논리, 절단 성질과 완화 근거로 구현의 정확성을 설명합니다.
+- 배열, 해시, 스택, 큐, 덱, 힙, 트리와 서로소 집합을 필요한 연산과 비용에 따라 선택합니다.
+- 완전탐색, 그리디와 동적 계획법을 적용할 수 있는 조건과 실패 반례를 구분합니다.
+- BFS, Dijkstra, Bellman–Ford, Kruskal, 최대 유량과 KMP의 전제와 반환값을 설명하고 구현합니다.
 - 작은 입력을 모두 계산하거나 다른 알고리즘을 사용해 독립적인 기준 결과를 만듭니다.
-- 실패 입력을 최소화하고 회귀 테스트로 남깁니다.
+- 실패 입력을 줄여 최소 반례를 만들고 회귀 테스트로 남깁니다.
 
-## 필수 학습 범위
+## 저장소 구성
+
+```text
+.
+├── README.md
+├── docs/
+│   ├── 00-roadmap.md
+│   ├── 01-foundations/
+│   ├── 02-data-structures/
+│   ├── 03-design-techniques/
+│   ├── 04-graph-algorithms/
+│   ├── 05-string-algorithms/
+│   ├── 06-complexity/
+│   ├── 80-extended-practice.md
+│   └── 90-implementation-profiles/
+└── exercises/
+    └── verified-algorithms/
+```
+
+- `docs/`는 문제 분석, 정확성, 비용과 알고리즘 선택 기준을 설명합니다.
+- `exercises/verified-algorithms/`는 서로 다른 알고리즘을 하나의 설치 가능한 패키지와 독립 검증으로 연결합니다.
+
+## 정본 전체 과정
+
+알고리즘 자체를 한 분야로 학습하려면 다음 순서를 사용합니다.
 
 ### 1. 문제 분석과 정확성
 
-- [`docs/01-foundations/01-problem-contracts-and-counterexamples.md`](docs/01-foundations/01-problem-contracts-and-counterexamples.md)
-- [`docs/01-foundations/02-asymptotic-analysis.md`](docs/01-foundations/02-asymptotic-analysis.md)
-- [`docs/01-foundations/04-correctness-and-invariants.md`](docs/01-foundations/04-correctness-and-invariants.md)
+- [`문제 조건과 반례`](docs/01-foundations/01-problem-contracts-and-counterexamples.md)
+- [`점근 분석`](docs/01-foundations/02-asymptotic-analysis.md)
+- [`점화식과 분할 정복`](docs/01-foundations/03-recurrences-and-divide-and-conquer.md)
+- [`정확성과 불변식`](docs/01-foundations/04-correctness-and-invariants.md)
 
-### 2. 선형 자료구조, 정렬과 탐색
+### 2. 자료구조와 탐색
 
-- [`docs/02-data-structures/01-linear-structures-ranges-and-hashing.md`](docs/02-data-structures/01-linear-structures-ranges-and-hashing.md)
-- [`docs/06-complexity/01-sorting-stability-and-lower-bounds.md`](docs/06-complexity/01-sorting-stability-and-lower-bounds.md)
-- [`docs/02-data-structures/02-order-search-heaps-and-priority.md`](docs/02-data-structures/02-order-search-heaps-and-priority.md)
+- [`선형 구조, 구간과 해시`](docs/02-data-structures/01-linear-structures-ranges-and-hashing.md)
+- [`순서, 탐색, 힙과 우선순위`](docs/02-data-structures/02-order-search-heaps-and-priority.md)
+- [`트리와 균형 탐색 트리`](docs/02-data-structures/03-trees-and-balanced-search-trees.md)
+- [`서로소 집합과 상각 분석`](docs/02-data-structures/04-disjoint-sets-and-amortized-analysis.md)
+- [`정렬, 안정성과 비교 하한`](docs/06-complexity/01-sorting-stability-and-lower-bounds.md)
 
-### 3. 재귀, tree와 DSU
+### 3. 설계 기법
 
-- [`docs/01-foundations/03-recurrences-and-divide-and-conquer.md`](docs/01-foundations/03-recurrences-and-divide-and-conquer.md)
-- [`docs/02-data-structures/03-trees-and-balanced-search-trees.md`](docs/02-data-structures/03-trees-and-balanced-search-trees.md)
-- [`docs/02-data-structures/04-disjoint-sets-and-amortized-analysis.md`](docs/02-data-structures/04-disjoint-sets-and-amortized-analysis.md)
+- [`완전탐색과 백트래킹`](docs/03-design-techniques/01-brute-force-and-backtracking.md)
+- [`그리디 설계`](docs/03-design-techniques/02-greedy-methods.md)
+- [`동적 계획법`](docs/03-design-techniques/03-dynamic-programming.md)
 
-### 4. 설계 기법
+### 4. 그래프와 문자열
 
-- [`docs/03-design-techniques/01-brute-force-and-backtracking.md`](docs/03-design-techniques/01-brute-force-and-backtracking.md)
-- [`docs/03-design-techniques/02-greedy-methods.md`](docs/03-design-techniques/02-greedy-methods.md)
-- [`docs/03-design-techniques/03-dynamic-programming.md`](docs/03-design-techniques/03-dynamic-programming.md)
+- [`그래프 순회와 위상 순서`](docs/04-graph-algorithms/01-traversal-and-topological-order.md)
+- [`최소 스패닝 트리`](docs/04-graph-algorithms/02-minimum-spanning-trees.md)
+- [`최단 경로`](docs/04-graph-algorithms/03-shortest-paths.md)
+- [`네트워크 유량과 매칭`](docs/04-graph-algorithms/04-network-flow-and-matching.md)
+- [`문자열 매칭과 전처리`](docs/05-string-algorithms/01-string-matching-and-preprocessing.md)
 
-### 5. 그래프와 문자열
-
-- [`docs/04-graph-algorithms/01-traversal-and-topological-order.md`](docs/04-graph-algorithms/01-traversal-and-topological-order.md)
-- [`docs/04-graph-algorithms/02-minimum-spanning-trees.md`](docs/04-graph-algorithms/02-minimum-spanning-trees.md)
-- [`docs/04-graph-algorithms/03-shortest-paths.md`](docs/04-graph-algorithms/03-shortest-paths.md)
-- [`docs/04-graph-algorithms/04-network-flow-and-matching.md`](docs/04-graph-algorithms/04-network-flow-and-matching.md)
-- [`docs/05-string-algorithms/01-string-matching-and-preprocessing.md`](docs/05-string-algorithms/01-string-matching-and-preprocessing.md)
-
-정확한 진행 순서는 [`docs/00-roadmap.md`](docs/00-roadmap.md)에 정리했습니다.
+정확한 문서·구현 순서는 [`docs/00-roadmap.md`](docs/00-roadmap.md)를 따릅니다.
 
 ## 구현 프로젝트
 
-필수 exercise는 하나입니다.
+필수 프로젝트는 [`verified-algorithms`](exercises/verified-algorithms/) 하나입니다.
 
-```text
-exercises/verified-algorithms/
-```
-
-이 프로젝트는 누적 합, lower bound, red-black tree 검증, 0/1 knapsack, 구간 선택, LCS, BFS, Dijkstra, Kruskal, Bellman–Ford, max flow, KMP를 하나의 설치 가능한 패키지로 제공합니다. 테스트는 후보 구현과 다른 계산 방법을 사용하며, 최적값뿐 아니라 MST 간선 목록과 flow matrix도 함께 검사합니다.
+이 프로젝트는 누적 합, lower bound, red-black tree 검증, 0/1 knapsack, 구간 선택, LCS, BFS, Dijkstra, Kruskal, Bellman–Ford, 최대 유량과 KMP를 제공합니다. 테스트는 후보 구현과 다른 계산 방법을 사용하며, 최적값뿐 아니라 선택한 간선과 유량 행렬처럼 결과를 설명하는 자료도 검사합니다.
 
 ```sh
 cd exercises/verified-algorithms
 python -m unittest discover -s tests -v
 ```
 
-완료 여부는 제공된 구현에서 테스트가 통과하는지만 보고 판단하지 않습니다. 별도 복사본에서 소스를 보지 않고 `Implementation 1`부터 `Implementation 12`까지 다시 작성한 뒤 같은 테스트를 통과해야 합니다.
+제공된 구현의 테스트가 통과하는 것만으로 완료하지 않습니다. 별도 복사본에서 구현을 보지 않고 공개 API와 테스트만 사용해 핵심 함수군을 다시 작성합니다.
 
-## 권장 진행 방식
+## 다른 개발 트랙에서 사용하는 방법
 
-```text
-기초 문서
-→ package와 누적 합·탐색 구현
-→ 재귀·tree 문서
-→ tree 검증 구현
-→ 설계 기법 문서
-→ greedy·DP 구현
-→ 그래프 문서와 구현
-→ 문자열 문서와 구현
-→ 공개 API와 전체 테스트
-→ 자료를 닫고 다시 구현
-```
+이 절은 알고리즘 전체 과정을 줄여 이수하라는 뜻이 아닙니다. 실제 프로젝트에서 필요한 부분을 찾는 지도입니다.
 
-한 번에 모든 문서를 읽은 뒤 구현을 시작하지 않습니다. 다음 함수군을 구현할 수 있을 정도로 개념을 익혔다면 바로 코드를 작성하고 테스트합니다. 실패하면 관련 문서만 다시 확인합니다.
+### C/C++ 프로젝트
 
-## 선택 자료
+먼저 다음 문서를 사용합니다.
 
-다음 문서는 필수 완료 조건에 포함하지 않습니다.
+- 문제 조건과 반례
+- 점근 분석
+- 선형 구조, 해시, 탐색과 힙
+- 정렬과 안정성
 
-- [`docs/06-complexity/02-complexity-classes-and-reductions.md`](docs/06-complexity/02-complexity-classes-and-reductions.md): P, NP, certificate와 다항 시간 환원을 다룹니다.
-- [`docs/80-extended-practice.md`](docs/80-extended-practice.md): 필수 범위를 마친 뒤 진행할 심화 문제를 제시합니다.
-- [`docs/90-implementation-profiles/python.md`](docs/90-implementation-profiles/python.md): Python 구현 시 주의할 비용과 실행 방식을 정리합니다.
-- [`docs/90-implementation-profiles/cpp20.md`](docs/90-implementation-profiles/cpp20.md): 같은 알고리즘을 C++20으로 옮길 때 확인할 정수 범위, comparator, 복사와 수명을 정리합니다.
+트리, 서로소 집합, 그래프와 동적 계획법은 현재 프로젝트가 해당 연산을 요구할 때 읽습니다.
 
-## 최종 완료 기준
+### 웹 애플리케이션
 
-다음 조건을 모두 만족해야 완료로 봅니다.
+다음 내용이면 대부분의 초기 프로젝트에 충분합니다.
 
-- 필수 문서의 알고리즘을 입력 조건과 복잡도에 따라 선택할 수 있습니다.
-- `verified-algorithms`의 전체 테스트가 통과합니다.
-- 구현을 보지 않고 핵심 함수군을 다시 작성해 같은 테스트를 통과합니다.
-- 각 함수의 입력 조건, 불변식 또는 정확성 근거, 시간·추가 공간, 독립 검증 방법을 설명할 수 있습니다.
-- 한 번 이상 실패한 입력을 최소화해 회귀 테스트로 남깁니다.
+- 입력 크기와 비용 계산
+- 해시, 정렬, 탐색과 우선순위
+- 페이지네이션, 구간 처리와 캐시 키에 필요한 기본 자료구조
 
-이 저장소의 범위만으로 모든 회사의 모든 출제 유형을 보장하지는 않습니다. 다만 현재 branch가 다루는 핵심 범위에서는 문제 유형 표시 없이 접근 방법을 정하고 구현·검증하는 데 필요한 기반을 제공합니다.
+그래프, 최대 유량과 고급 문자열 알고리즘은 실제 제품 기능이 요구할 때만 추가합니다.
+
+### 게임 서버
+
+다음 내용을 우선 사용합니다.
+
+- 비용 계산과 실패 반례
+- 큐, 덱, 힙과 해시
+- 트리와 서로소 집합
+- 경로 탐색, 매칭 또는 스케줄링이 필요한 경우 관련 그래프 절
+
+실시간 tick이나 네트워크 전송 문제를 알고리즘 문제로만 환원하지 않습니다. 시간, 동시성, 상태 전송은 운영체제·네트워크·게임 서버 가이드에서 함께 검토합니다.
+
+## 선택 심화
+
+- [`복잡도 클래스와 환원`](docs/06-complexity/02-complexity-classes-and-reductions.md)
+- [`확장 문제와 검증 설계`](docs/80-extended-practice.md)
+- [`Python 구현 프로필`](docs/90-implementation-profiles/python.md)
+- [`C++20 구현 프로필`](docs/90-implementation-profiles/cpp20.md)
+
+선택 자료는 필수 구현이 끝난 뒤, 해당 문제를 실제로 다뤄야 할 때 사용합니다.
+
+## 완료 기준
+
+- 필수 문서의 알고리즘을 입력 조건과 비용에 따라 선택합니다.
+- `verified-algorithms`의 전체 테스트를 통과합니다.
+- 구현을 보지 않고 핵심 함수군을 다시 작성해 같은 검사를 통과합니다.
+- 각 함수의 입력 조건, 정확성 근거, 시간·추가 공간과 독립 검증 방법을 설명합니다.
+- 한 번 이상 실패 입력을 최소화해 회귀 테스트로 남깁니다.
+
+## 범위 밖
+
+이 브랜치만으로 모든 기업의 알고리즘 시험 유형이나 모든 제품의 성능 문제를 보장하지 않습니다. 특정 언어의 런타임 비용, 운영체제 스케줄링, 데이터베이스 실행 계획과 네트워크 지연은 해당 브랜치와 실제 프로젝트에서 별도로 확인합니다.
