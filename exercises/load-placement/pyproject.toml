@@ -12,5 +12,8 @@ license = {text = "MIT"}
 authors = [{name = "seungwoo7050"}]
 dependencies = []
 
+[project.scripts]
+load-placement = "load_placement.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
