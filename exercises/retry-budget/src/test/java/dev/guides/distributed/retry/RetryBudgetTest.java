@@ -219,5 +219,3 @@ public final class RetryBudgetTest {
         );
     }
 }
-
-// Historical implementation boundary: commit 24.

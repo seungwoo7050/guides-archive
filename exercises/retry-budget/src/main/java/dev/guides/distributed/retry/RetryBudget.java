@@ -262,5 +262,3 @@ public final class RetryBudget {
     private RetryBudget() {
     }
 }
-
-// Historical implementation boundary: commit 24.
