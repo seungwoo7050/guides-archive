@@ -198,5 +198,3 @@ class BoundedTaskRunnerTest {
     }
   }
 }
-
-// Historical implementation boundary: commit 17.
