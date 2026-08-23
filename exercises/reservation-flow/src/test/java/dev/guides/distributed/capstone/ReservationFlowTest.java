@@ -583,5 +583,3 @@ public final class ReservationFlowTest {
             "Matching PENDING states are not terminal convergence");
     }
 }
-
-// Historical implementation boundary: commit 37.

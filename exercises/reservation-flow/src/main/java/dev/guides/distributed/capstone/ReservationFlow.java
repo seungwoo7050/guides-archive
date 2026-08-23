@@ -1030,5 +1030,3 @@ public final class ReservationFlow {
     private ReservationFlow() {
     }
 }
-
-// Historical implementation boundary: commit 37.
