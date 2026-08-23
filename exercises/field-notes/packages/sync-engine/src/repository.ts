@@ -421,5 +421,3 @@ export class InMemorySyncRepository implements SyncRepository {
     return result;
   }
 }
-
-// Historical implementation boundary: commit 16.
