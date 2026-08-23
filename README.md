@@ -1,97 +1,134 @@
 # 웹 애플리케이션 개발 가이드
 
-이 저장소는 웹 애플리케이션을 구현할 때 반복해서 필요한 실행 원리와 설계 판단을 정리합니다. 모든 문서를 먼저 읽고 연습 문제를 푼 뒤 프로젝트에 들어가는 방식은 사용하지 않습니다. 최소한의 공통 지식을 익힌 다음 실제 프로젝트를 시작하고, 필요한 주제는 구현 시점에 찾아봅니다. 프로젝트를 마친 뒤에는 `exercises/`의 독립 프로젝트를 가이드 없이 다시 구현해 개발 능력이 다른 문제에도 적용되는지 확인합니다.
-
-## 학습 방식
+이 브랜치는 작은 풀스택 웹 애플리케이션을 실제 프로젝트에서 구현하기 위한 공통 기반, 기능별 JIT 문서와 프로젝트 완료 뒤 전이 검증을 제공합니다. 모든 문서를 먼저 읽고 exercise를 끝낸 뒤 프로젝트에 들어가지 않습니다.
 
 ```text
-Core Guide 정독
-→ 실제 프로젝트 구현
-→ 필요한 주제를 JIT Guide에서 확인
-→ 프로젝트 PASS
-→ Competency Suite를 README의 입력·출력 조건과 테스트만 보고 구현
-→ 실패한 주제만 Guide로 되짚기
+Stable Core
+→ Actual Project
+→ 필요한 주제를 JIT로 확인
+→ Project PASS
+→ Competency Suite without Guide
+→ 실패한 주제만 Rewind
 ```
 
-- **Core Guide**는 웹 프로젝트의 종류와 관계없이 먼저 읽습니다.
-- **JIT Guide**는 데이터베이스, 인증, WebSocket처럼 해당 기능을 구현하기 직전에 읽습니다.
-- **Competency Suite**는 프로젝트를 시작하기 위한 예습이 아닙니다. 프로젝트 경험을 다른 문제에서도 재현할 수 있는지 검사합니다.
+## 대상 프로젝트
 
-세부 순서는 [`docs/00-roadmap.md`](docs/00-roadmap.md)에 정리되어 있습니다.
+브라우저 UI, HTTP API, 관계형 데이터, 인증과 선택적인 실시간 통신을 한 프로젝트에서 연결하는 웹 애플리케이션을 대상으로 합니다. 현재 프로젝트 모음에서는 `web/ft_transcendence`와 같은 풀스택 프로젝트에 적용할 수 있습니다.
 
 ## 저장소 구성
 
 ```text
 .
-├── .gitignore
 ├── README.md
 ├── docs/
+│   ├── 01-web-foundations/
+│   ├── 02-frontend/
+│   ├── 03-backend/
+│   ├── 04-data-and-security/
+│   └── 05-realtime-and-quality/
 └── exercises/
+    ├── browser-directory/
+    ├── runtime-workspace/
+    ├── user-directory/
+    ├── notes-api/
+    ├── seat-reservation/
+    ├── session-access-control/
+    └── realtime-board/
 ```
 
-### `docs/`
+## Stable Core
 
-문서는 다섯 영역으로 나뉩니다.
+프로젝트 진입 전에는 다음 실행 원리와 구현 기준을 익힙니다.
 
-| 영역 | 다루는 내용 |
-|---|---|
-| `01-web-foundations` | HTTP, JavaScript, DOM, 비동기 처리, TypeScript, Node.js |
-| `02-frontend` | React 상태, 폼, Effect, Next.js 실행 위치와 데이터 요청 |
-| `03-backend` | HTTP API, Fastify 생명주기, 런타임 검증, 서비스와 저장 코드 분리 |
-| `04-data-and-security` | 관계형 모델, PostgreSQL, 트랜잭션, 세션, 권한, CSRF와 CORS |
-| `05-realtime-and-quality` | WebSocket, 실시간 상태 복구, Canvas, 테스트 전략 |
+- HTTP 요청과 응답, browser와 Node.js의 실행 위치
+- JavaScript module, Promise와 실패 처리
+- TypeScript 타입과 실행 시 외부 입력 검증의 차이
+- DOM, form과 기본 접근성
+- React 상태, event와 Effect 수명
+- Next.js의 Server Component, Client Component와 Route Handler
+- HTTP route, 업무 처리와 저장 코드의 분리
+- Fastify application 생성과 실제 port 열기의 분리
 
-문서가 저장소에 있다는 이유만으로 프로젝트 전에 모두 읽을 필요는 없습니다. 로드맵에서 Core와 JIT를 구분합니다.
-
-### `exercises/`
-
-최종 역량 검증에는 다음 일곱 프로젝트를 사용합니다.
-
-| 프로젝트 | 다시 확인하는 능력 |
-|---|---|
-| `browser-directory` | URL과 방문 기록을 기준으로 브라우저 상태를 복원하는 능력 |
-| `runtime-workspace` | Node.js 실행 환경, TypeScript 입력 검증, 패키지 공개 범위를 구성하는 능력 |
-| `user-directory` | React 상태와 비동기 요청 수명, Next.js 라우트를 다루는 능력 |
-| `notes-api` | 요청 검증, 업무 처리, 저장 코드, HTTP 오류를 분리하는 능력 |
-| `seat-reservation` | 제약 조건과 트랜잭션으로 경쟁 쓰기와 롤백을 처리하는 능력 |
-| `session-access-control` | 세션 발급·폐기, Origin 검사, 소유권과 역할 권한을 처리하는 능력 |
-| `realtime-board` | WebSocket 연결, 방 참가, 버전 충돌, 스냅샷 복구, 자원 정리를 구현하는 능력 |
-
-각 프로젝트는 상위 저장소의 스크립트나 다른 exercise에 의존하지 않습니다. 해당 디렉터리만 복사해 설치하고 테스트할 수 있어야 합니다.
+세부 문서는 [`docs/00-roadmap.md`](docs/00-roadmap.md)에서 Core와 JIT로 구분합니다.
 
 ## 프로젝트 진입 기준
 
-Core Guide를 읽은 뒤 다음 질문에 답할 수 있으면 실제 프로젝트를 시작합니다.
+다음 질문에 답할 수 있으면 실제 프로젝트를 시작합니다.
 
-- 브라우저와 Node.js에서 코드가 각각 어디서 실행되는지 설명할 수 있습니까?
-- Promise 실패와 HTTP 오류 응답을 구분할 수 있습니까?
-- TypeScript 타입만으로 외부 입력을 신뢰하면 안 되는 이유를 설명할 수 있습니까?
-- React 상태와 Effect를 어느 컴포넌트에 둘지 판단할 수 있습니까?
-- Next.js의 Server Component와 Client Component를 구분할 수 있습니까?
-- HTTP 라우트, 업무 규칙, 저장 코드를 분리할 수 있습니까?
-- Fastify 애플리케이션 생성과 실제 포트 열기를 분리할 수 있습니까?
+- browser와 Node.js에서 코드가 각각 어디서 실행됩니까?
+- Promise 실패와 HTTP 오류 응답은 어떻게 다릅니까?
+- TypeScript 타입만으로 외부 입력을 신뢰하면 안 되는 이유는 무엇입니까?
+- React 상태와 Effect를 어느 component에 둘지 어떻게 정합니까?
+- Server Component와 Client Component를 어떻게 구분합니까?
+- route, 업무 규칙과 저장 코드를 어떻게 나눕니까?
+- application 생성과 network listen을 왜 분리합니까?
 
-이 기준을 통과했다면 데이터베이스, 인증, 실시간 통신을 미리 완벽하게 공부하려고 멈추지 않습니다. 해당 기능을 구현할 때 관련 문서를 읽고 바로 코드에 적용합니다.
+데이터베이스, 인증과 WebSocket을 미리 완벽하게 공부하려고 프로젝트 시작을 늦추지 않습니다.
 
-## Competency Suite 수행 규칙
+## Actual Project에서 먼저 할 일
 
-프로젝트를 PASS한 뒤 다음 순서로 진행합니다.
+1. 설치, 개발 server, typecheck, test, build와 production start 명령을 확인합니다.
+2. 사용자 행동 하나가 URL, server code, client code와 HTTP 요청을 거치는 경로를 추적합니다.
+3. 외부 입력을 검사하는 위치를 찾습니다.
+4. URL, server 응답, 화면 상태와 입력 초안을 누가 보관하는지 정합니다.
+5. 실패해도 유지해야 할 마지막 정상 결과와 사용자 입력을 정합니다.
+6. 하나의 작은 수직 기능을 정상·오류·새로고침까지 완성합니다.
 
-1. exercise의 README, 공개 API, 입력·출력 조건과 테스트를 읽습니다.
-2. 가이드와 기존 구현을 보지 않고 직접 구현합니다.
-3. 테스트가 실패하면 먼저 요구사항과 자신의 설계를 다시 확인합니다.
-4. 원인을 설명하지 못하는 주제만 관련 가이드에서 다시 읽습니다.
-5. 수정 후 같은 실패를 검출하는 테스트가 남아 있는지 확인합니다.
+## JIT / Rewind 지도
 
-목표는 정답 코드의 모양을 복사하는 것이 아닙니다. 상태를 누가 보관하는지, 실패 후 어떤 값이 남는지, 어떤 테스트가 그 조건을 검증하는지 설명할 수 있어야 합니다.
+| 구현할 내용 | 문서 영역 |
+|---|---|
+| browser URL, DOM, 비동기와 TypeScript | [`01-web-foundations`](docs/01-web-foundations/) |
+| React 상태, form, Effect와 Next.js | [`02-frontend`](docs/02-frontend/) |
+| HTTP API, Fastify와 runtime validation | [`03-backend`](docs/03-backend/) |
+| PostgreSQL, transaction, session, 권한, CSRF·CORS | [`04-data-and-security`](docs/04-data-and-security/) |
+| WebSocket, 상태 복구, Canvas와 test | [`05-realtime-and-quality`](docs/05-realtime-and-quality/) |
 
-## 범위
+프로젝트 구현 중에는 JIT 자료로, Competency Suite에서 실패한 뒤에는 Rewind 자료로 사용합니다.
 
-이 저장소는 한 사람이 작은 풀스택 웹 애플리케이션을 구현하고 검증할 수 있는 수준까지 다룹니다. 다음 주제는 별도의 전문 가이드가 맡습니다.
+## Project PASS 기준
 
-- 운영 호스트, DNS, 공인 TLS, 배포 자동화, 관측성, 백업과 복구
-- 데이터베이스 저장 엔진, MVCC, WAL, 실행 계획의 상세 원리
-- 여러 서비스 사이의 메시지 전달, saga, 분산 트랜잭션
-- 특정 산업의 업무 규칙과 규제 요건
+- 사용자 기능 하나가 실제 browser에서 처음부터 끝까지 동작합니다.
+- 외부 입력을 runtime에서 검사합니다.
+- 오류 응답과 network 실패를 구분해 화면에 반영합니다.
+- schema 제약과 transaction으로 경쟁 쓰기 또는 rollback 조건을 확인합니다.
+- 인증 정보 발급·폐기, 객체 소유권과 역할 권한을 검사합니다.
+- 실시간 기능이 있다면 reconnect, version conflict와 resource cleanup을 확인합니다.
+- 단위, API와 browser 검사를 목적에 맞게 나눕니다.
+- 고정 설치, production build와 production start를 확인합니다.
+- 운영 host, 공인 DNS·TLS와 backup을 검사하지 않았다면 미검사로 기록합니다.
 
-이 저장소의 문서와 exercise는 실제 프로젝트를 늦추기 위한 선행 과제가 아니라, 구현 중 판단과 프로젝트 후 재검증을 돕는 도구입니다.
+## Competency Suite
+
+실제 프로젝트를 PASS한 뒤 다음 프로젝트 중 필요한 검증을 가이드와 기존 구현 없이 수행합니다.
+
+| 프로젝트 | 다시 확인하는 능력 |
+|---|---|
+| `browser-directory` | URL과 history로 browser 상태 복원 |
+| `runtime-workspace` | Node.js 실행 환경, TypeScript 입력 검증과 package 경계 |
+| `user-directory` | React 상태, 비동기 요청 수명과 Next.js route |
+| `notes-api` | 요청 검증, 업무 처리, 저장 코드와 HTTP 오류 분리 |
+| `seat-reservation` | 제약과 transaction으로 경쟁 쓰기·rollback 처리 |
+| `session-access-control` | session 수명, Origin, 객체 소유권과 역할 권한 |
+| `realtime-board` | WebSocket, 방 참가, version conflict, snapshot 복구와 정리 |
+
+각 프로젝트는 해당 디렉터리만 복사해 설치하고 테스트할 수 있어야 합니다.
+
+## FAIL → Rewind
+
+1. exercise의 README, 공개 API와 test failure를 읽습니다.
+2. 기존 구현과 가이드를 보기 전에 자신의 요구사항 해석과 상태 배치를 확인합니다.
+3. 원인을 설명하지 못하는 주제만 다시 읽습니다.
+4. 같은 실패를 검출하는 test를 남기고 전체 검사를 다시 실행합니다.
+
+## 완료 기준
+
+- Stable Core 뒤 실제 풀스택 프로젝트를 시작해 PASS합니다.
+- 프로젝트에 필요한 JIT 문서만 선택합니다.
+- 선택한 Competency Suite를 가이드 없이 통과합니다.
+- 상태를 누가 보관하고 실패 뒤 어떤 값이 남는지 설명합니다.
+- 자동 검사와 실제 배포·운영 경험의 차이를 명시합니다.
+
+## 범위 밖
+
+운영 host, 공인 DNS·TLS, 배포 자동화, 중앙 관측, backup·복구, DBMS 저장 엔진, 서비스 사이 Saga와 특정 산업 규제는 별도 과정과 실제 업무가 맡습니다.
