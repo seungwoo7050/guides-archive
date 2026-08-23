@@ -177,5 +177,3 @@ public final class ContractsAndOrder {
     private ContractsAndOrder() {
     }
 }
-
-// Historical implementation boundary: commit 17.

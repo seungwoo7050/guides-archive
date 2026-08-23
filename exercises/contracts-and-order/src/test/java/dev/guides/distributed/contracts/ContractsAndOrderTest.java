@@ -126,5 +126,3 @@ public final class ContractsAndOrderTest {
         Checks.equals(0, projection.isolatedCount(), "Invalid versions are not compatibility isolation");
     }
 }
-
-// Historical implementation boundary: commit 17.
