@@ -79,5 +79,3 @@ public final class ReadModelRebuildTest {
         Checks.equals(1, projection.appliedCount(), "A conflict must not add an event claim");
     }
 }
-
-// Historical implementation boundary: commit 20.

@@ -120,5 +120,3 @@ public final class ReadModelRebuild {
     private ReadModelRebuild() {
     }
 }
-
-// Historical implementation boundary: commit 20.
