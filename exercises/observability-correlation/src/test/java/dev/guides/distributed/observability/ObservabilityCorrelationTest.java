@@ -139,5 +139,3 @@ public final class ObservabilityCorrelationTest {
         }
     }
 }
-
-// Historical implementation boundary: commit 30.

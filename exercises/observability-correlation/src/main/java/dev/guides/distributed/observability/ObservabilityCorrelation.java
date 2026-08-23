@@ -192,5 +192,3 @@ public final class ObservabilityCorrelation {
     private ObservabilityCorrelation() {
     }
 }
-
-// Historical implementation boundary: commit 30.
