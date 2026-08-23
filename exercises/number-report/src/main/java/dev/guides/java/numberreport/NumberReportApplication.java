@@ -62,5 +62,3 @@ public final class NumberReportApplication {
     }
   }
 }
-
-// Historical implementation boundary: commit 5.

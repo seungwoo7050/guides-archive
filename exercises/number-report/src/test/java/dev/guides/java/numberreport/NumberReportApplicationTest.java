@@ -116,5 +116,3 @@ class NumberReportApplicationTest {
 
   private record ProcessResult(int status, String output, String error) {}
 }
-
-// Historical implementation boundary: commit 5.
