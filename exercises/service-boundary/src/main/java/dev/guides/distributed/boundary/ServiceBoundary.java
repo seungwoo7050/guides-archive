@@ -122,5 +122,3 @@ public final class ServiceBoundary {
     private ServiceBoundary() {
     }
 }
-
-// Historical implementation boundary: commit 6.

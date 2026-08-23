@@ -90,5 +90,3 @@ public final class ServiceBoundaryTest {
         );
     }
 }
-
-// Historical implementation boundary: commit 6.
