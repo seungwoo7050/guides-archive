@@ -409,3 +409,370 @@ class TrustEngine:
             return False, bucket
         bucket.tokens -= 1
         return True, bucket
+
+    # [Implementation 7]
+    # Validate and prepare authoritative changes
+    # 정본 상태를 직접 바꾸지 않고 적용할 다음 값을 먼저 계산합니다.
+    def _validate_and_prepare_change(
+        self,
+        player: Player,
+        command: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        kind = command["kind"]
+        payload = command["payload"]
+        if kind in ("SET_POSITION", "SET_SCORE", "CLAIM_OWNERSHIP"):
+            return None, "CLIENT_AUTHORITY_VIOLATION"
+        if kind == "MOVE":
+            dx = payload.get("dx")
+            dy = payload.get("dy")
+            if not self._is_int(dx) or not self._is_int(dy):
+                return None, "INVALID_PAYLOAD"
+            if abs(dx) > self.max_move_delta or abs(dy) > self.max_move_delta:
+                return None, "MOVE_LIMIT_EXCEEDED"
+            next_x = player.x + dx
+            next_y = player.y + dy
+            if (
+                next_x < -self.coordinate_limit
+                or next_x > self.coordinate_limit
+                or next_y < -self.coordinate_limit
+                or next_y > self.coordinate_limit
+            ):
+                return None, "COORDINATE_LIMIT_EXCEEDED"
+            return {"kind": "MOVE", "x": next_x, "y": next_y}, None
+        if kind == "USE_OWNED_ENTITY":
+            entity_id = payload.get("entity_id")
+            if not isinstance(entity_id, str) or not entity_id:
+                return None, "INVALID_PAYLOAD"
+            entity = self.entities.get(entity_id)
+            if entity is None:
+                return None, "ENTITY_NOT_FOUND"
+            if entity.room_id != player.room_id or entity.match_id != player.match_id:
+                return None, "ENTITY_SCOPE_MISMATCH"
+            if entity.owner_player_id != player.player_id:
+                return None, "ENTITY_OWNERSHIP_MISMATCH"
+            if entity.use_count >= 2_147_483_647:
+                return None, "ARITHMETIC_OVERFLOW"
+            return {
+                "kind": "USE_OWNED_ENTITY",
+                "entity_id": entity_id,
+                "use_count": entity.use_count + 1,
+            }, None
+        return None, "UNSUPPORTED_COMMAND"
+
+    # [Implementation 7-1]
+    # Commit sequence after state change
+    # 상태 변경이 끝난 뒤에만 sequence를 갱신합니다.
+    def _commit_change(
+        self,
+        player: Player,
+        command: dict[str, Any],
+        change: dict[str, Any],
+    ) -> dict[str, Any]:
+        if change["kind"] == "MOVE":
+            player.x = change["x"]
+            player.y = change["y"]
+            applied = {"player_id": player.player_id, "x": player.x, "y": player.y}
+        else:
+            entity = self.entities[change["entity_id"]]
+            entity.use_count = change["use_count"]
+            applied = {"entity_id": entity.entity_id, "use_count": entity.use_count}
+        player.last_sequence = command["sequence"]
+        applied["last_sequence"] = player.last_sequence
+        return applied
+
+    def _command_fingerprint(self, command: dict[str, Any]) -> str:
+        return digest_value(
+            {
+                key: value
+                for key, value in command.items()
+                if key not in ("payload_size", "payload")
+            }
+        )
+
+    def _redacted_audit(
+        self,
+        command: dict[str, Any],
+        decision: CommandDecision,
+    ) -> dict[str, Any]:
+        actor_id = command.get("authenticated_actor_id", command["actor_id"])
+        return {
+            "audit_id": digest_value(
+                {
+                    "command_id": command["command_id"],
+                    "command_fingerprint": self._command_fingerprint(command),
+                    "decision": decision.status,
+                    "reason_code": decision.reason_code,
+                    "release_id": self.release_id,
+                }
+            ),
+            "actor_id": actor_id,
+            "claimed_actor_id": command["actor_id"],
+            "session_id": command["session_id"],
+            "player_id": command["player_id"],
+            "room_id": command["room_id"],
+            "match_id": command["match_id"],
+            "command_id": command["command_id"],
+            "command_kind": command["kind"],
+            "decision": decision.status,
+            "reason_code": decision.reason_code,
+            "release_id": self.release_id,
+            "payload_size": command["payload_size"],
+            "payload_digest": digest_value(command["safe_payload"]),
+        }
+
+    # [Implementation 8]
+    # Redacted audit records
+    # 원문 payload와 인증 token 대신 크기, digest, 판정 사유만 기록합니다.
+    def _record_audit(
+        self,
+        command: dict[str, Any],
+        decision: CommandDecision,
+    ) -> None:
+        self.audit_events.append(self._redacted_audit(command, decision))
+        if decision.status == "DENY":
+            key = (
+                command.get("authenticated_actor_id", command["actor_id"]),
+                command["match_id"],
+                decision.reason_code,
+            )
+            self.denial_groups.setdefault(key, set()).add(command["command_id"])
+
+    def _deny(
+        self,
+        command: dict[str, Any],
+        reason: str,
+        fingerprint: str,
+        *,
+        cache: bool = True,
+    ) -> CommandDecision:
+        decision = CommandDecision(command["command_id"], "DENY", reason)
+        if cache:
+            self.command_cache[command["command_id"]] = (fingerprint, decision)
+        self._record_audit(command, decision)
+        return decision
+
+    def handle_command(self, raw: Any, logical_time: int) -> CommandDecision:
+        command, error = self._normalize_command(raw)
+        if command is None:
+            command_id = (
+                str(raw.get("command_id", "invalid-command"))
+                if isinstance(raw, dict)
+                else "invalid-command"
+            )
+            return CommandDecision(command_id, "DENY", error or "INVALID_COMMAND")
+        fingerprint = self._command_fingerprint(command)
+        known_session = self.sessions.get(command["session_id"])
+        if known_session is not None:
+            command["authenticated_actor_id"] = known_session.actor_id
+
+        # [Implementation 9]
+        # Duplicate command decision reuse
+        # 같은 command ID는 최초 판정을 재사용하고 충돌 요청이 audit 수를 계속 늘리지 못하게 합니다.
+        cached = self.command_cache.get(command["command_id"])
+        if cached is not None:
+            cached_fingerprint, cached_decision = cached
+            if cached_fingerprint == fingerprint:
+                return CommandDecision(
+                    command["command_id"],
+                    "IGNORED",
+                    "DUPLICATE_COMMAND",
+                    cached_decision.applied_changes,
+                )
+            conflict = (command["command_id"], fingerprint)
+            if conflict in self.command_conflicts:
+                return CommandDecision(
+                    command["command_id"],
+                    "IGNORED",
+                    "DUPLICATE_COMMAND_ID_CONFLICT",
+                )
+            self.command_conflicts.add(conflict)
+            return self._deny(
+                command,
+                "COMMAND_ID_CONFLICT",
+                fingerprint,
+                cache=False,
+            )
+
+        session, reason = self._validate_session(command)
+        if reason is not None or session is None:
+            return self._deny(command, reason or "SESSION_NOT_ACTIVE", fingerprint)
+        player, reason = self._validate_membership(command)
+        if reason is not None or player is None:
+            return self._deny(command, reason or "PLAYER_NOT_FOUND", fingerprint)
+
+        allowed, _bucket = self._consume_rate_limit(
+            session,
+            player,
+            command["kind"],
+            logical_time,
+        )
+        if not allowed:
+            return self._deny(command, "RATE_LIMITED", fingerprint)
+
+        if error is not None:
+            return self._deny(command, error, fingerprint)
+
+        if command["sequence"] <= player.last_sequence:
+            return self._deny(command, "STALE_SEQUENCE", fingerprint)
+        if command["sequence"] != player.last_sequence + 1:
+            return self._deny(command, "SEQUENCE_GAP", fingerprint)
+
+        change, reason = self._validate_and_prepare_change(player, command)
+        if reason is not None or change is None:
+            return self._deny(command, reason or "INVALID_COMMAND", fingerprint)
+        applied = self._commit_change(player, command, change)
+        decision = CommandDecision(command["command_id"], "ALLOW", "ALLOWED", applied)
+        self.command_cache[command["command_id"]] = (fingerprint, decision)
+        self._record_audit(command, decision)
+        return decision
+
+    def reconnect(self, raw: dict[str, Any]) -> tuple[str, str]:
+        session_id = str(raw.get("session_id", ""))
+        connection_id = str(raw.get("new_connection_id", ""))
+        epoch = raw.get("session_epoch")
+        session = self.sessions.get(session_id)
+        if session is None:
+            return "REJECTED", "SESSION_NOT_FOUND"
+        if (
+            not connection_id
+            or not self._is_int(epoch)
+            or epoch != session.epoch + 1
+        ):
+            return "REJECTED", "SESSION_EPOCH_MISMATCH"
+        if any(
+            other.session_id != session_id
+            and other.active
+            and other.connection_id == connection_id
+            for other in self.sessions.values()
+        ):
+            return "REJECTED", "CONNECTION_ALREADY_BOUND"
+        session.connection_id = connection_id
+        session.epoch = epoch
+        session.active = True
+        return "ACCEPTED", "RECONNECTED"
+
+    def apply_event(self, raw: dict[str, Any]) -> None:
+        event_id = str(raw.get("event_id", ""))
+        kind = str(raw.get("kind", ""))
+        logical_time = raw.get("logical_time")
+        if (
+            not event_id
+            or not kind
+            or not self._is_int(logical_time)
+            or logical_time < self.logical_time
+        ):
+            raise ValueError("event_id, kind, and non-decreasing logical_time are required")
+        self.logical_time = logical_time
+        details: dict[str, Any] = {}
+        if event_id in self.processed_event_ids:
+            status, reason = "IGNORED", "DUPLICATE_EVENT"
+        else:
+            self.processed_event_ids.add(event_id)
+            if kind == "COMMAND":
+                decision = self.handle_command(raw.get("command"), logical_time)
+                status, reason = decision.status, decision.reason_code
+                details["decision"] = asdict(decision)
+            elif kind == "RECONNECT":
+                status, reason = self.reconnect(raw)
+            else:
+                status, reason = "REJECTED", "UNKNOWN_EVENT"
+        self.trace.append(
+            {
+                "event_id": event_id,
+                "kind": kind,
+                "logical_time": logical_time,
+                "status": status,
+                "reason_code": reason,
+                **details,
+                "state_digest": digest_value(self._state_dict()),
+            }
+        )
+
+    # [Implementation 10]
+    # Order-stable alert aggregation
+    # actor, match, reason별 고유 command ID 집합으로 계산해 입력 순서와 중복의 영향을 없앱니다.
+    def _alerts(self) -> list[dict[str, Any]]:
+        alerts: list[dict[str, Any]] = []
+        for key in sorted(self.denial_groups):
+            command_ids = sorted(self.denial_groups[key])
+            if len(command_ids) >= self.alert_threshold:
+                actor_id, match_id, reason_code = key
+                alerts.append(
+                    {
+                        "correlation_id": digest_value(
+                            {
+                                "actor_id": actor_id,
+                                "match_id": match_id,
+                                "reason_code": reason_code,
+                            }
+                        ),
+                        "actor_id": actor_id,
+                        "match_id": match_id,
+                        "reason_code": reason_code,
+                        "unique_command_count": len(command_ids),
+                        "command_ids": command_ids,
+                    }
+                )
+        return alerts
+
+    def _state_dict(self) -> dict[str, Any]:
+        return {
+            "sessions": [asdict(self.sessions[item]) for item in sorted(self.sessions)],
+            "players": [asdict(self.players[item]) for item in sorted(self.players)],
+            "rooms": [
+                {
+                    "room_id": self.rooms[item].room_id,
+                    "player_ids": sorted(self.rooms[item].player_ids),
+                }
+                for item in sorted(self.rooms)
+            ],
+            "matches": [
+                {
+                    "match_id": self.matches[item].match_id,
+                    "room_id": self.matches[item].room_id,
+                    "state": self.matches[item].state,
+                    "player_ids": sorted(self.matches[item].player_ids),
+                }
+                for item in sorted(self.matches)
+            ],
+            "entities": [asdict(self.entities[item]) for item in sorted(self.entities)],
+        }
+
+    def _bucket_list(self) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for key in sorted(self.buckets):
+            session_id, player_id, kind = key
+            bucket = self.buckets[key]
+            result.append(
+                {
+                    "session_id": session_id,
+                    "player_id": player_id,
+                    "command_kind": kind,
+                    "tokens": bucket.tokens,
+                    "last_tick": bucket.last_tick,
+                }
+            )
+        return result
+
+    def result(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "trace": self.trace,
+            "authoritative_state": self._state_dict(),
+            "rate_limit_buckets": self._bucket_list(),
+            "audit_events": self.audit_events,
+            "alerts": self._alerts(),
+        }
+        result["digest"] = digest_value(result)
+        return result
+
+
+def run_scenario(scenario: dict[str, Any]) -> dict[str, Any]:
+    engine = TrustEngine(scenario)
+    events = scenario.get("events", [])
+    if not isinstance(events, list):
+        raise ValueError("events must be an array")
+    for event in events:
+        if not isinstance(event, dict):
+            raise ValueError("each event must be an object")
+        engine.apply_event(event)
+    return engine.result()
