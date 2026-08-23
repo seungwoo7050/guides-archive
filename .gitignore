@@ -1,0 +1,22 @@
+# 운영체제와 편집기
+.DS_Store
+*.swp
+*.swo
+
+# 로그와 임시 파일
+*.log
+*.pid
+*.tmp
+
+# 환경 변수와 비밀값
+.env
+.env.*
+!.env.example
+
+# Java 빌드 결과와 개발 도구
+**/target/
+*.jfr
+.classpath
+.project
+.factorypath
+*.iml
