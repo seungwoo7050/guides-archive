@@ -278,5 +278,3 @@ class ConcurrentJobLedgerTest {
     }
   }
 }
-
-// Historical implementation boundary: commit 20.

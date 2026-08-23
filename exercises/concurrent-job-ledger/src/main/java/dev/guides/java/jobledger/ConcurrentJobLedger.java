@@ -202,5 +202,3 @@ public final class ConcurrentJobLedger implements AutoCloseable {
     }
   }
 }
-
-// Historical implementation boundary: commit 20.
