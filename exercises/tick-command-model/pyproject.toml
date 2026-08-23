@@ -12,5 +12,8 @@ license = {text = "MIT"}
 authors = [{name = "seungwoo7050"}]
 dependencies = []
 
+[project.scripts]
+tick-command-model = "tick_command_model.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
